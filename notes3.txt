@@ -1,0 +1,109 @@
+Rendering columns dynamically — AG Grid with React and Typescript
+
+grids have some dynamic columns and not every row of data has all the columns
+
+The solution ror columnDefs:
+https://gist.github.com/mayyyc/68f850377460e0d967dd87c9484e113e
+
+
+{
+  ...,
+  {
+    field: ...,
+  },
+  ...customFieldDefs.map((customFieldDef) => ({
+    field: customFieldDef.name,
+    valueGetter: (params) => {
+      if (!params.data) return undefined;
+      const field = params.data[customFieldDef.name];
+      return field && getCustomFieldStringValue(field);
+    },
+    cellRenderer: "customFieldCellRenderer",
+  })),
+  ...
+}
+
+ 
+For rowData:
+https://gist.github.com/mayyyc/a22d3ccc0bbde3744ec1921c9f4c31c7
+
+owData = data.map((each) => {
+    const { id, domain, ..., customFields } = each;
+    const row = {
+      id,
+      domain,
+    };
+    customFields?.forEach((customField) => {
+      row[customField.name] = customField;
+    });
+    return row;
+  });
+
+Custom field cell renderer:
+https://gist.github.com/mayyyc/25a3d3e9ea681fe3591f18abaa3dc9a9#file-customfieldcellrenderer-tsx
+
+import React from "react";
+import { ICellRendererParams } from "ag-grid-community";
+import { getFormatedDate } from "helpers/dateUtils";
+import { EmployeeAvatar } from "employee/partials/EmployeeAvatar";
+import { Chips } from "common/Chips";
+import { Chip } from "@mui/material";
+
+export const CustomFieldCellRenderer = ({
+  data,
+  column,
+}: ICellRendererParams) => {
+  if (!data || !column) return null;
+  const customFieldName = column.getColId();
+  const value = data[customFieldName];
+  if (!value) return null;
+  switch (value.__typename) {
+    case "CustomFieldDate":
+      return getFormatedDate(value.dateValue);
+    case "CustomFieldMulti":
+      return value.multiValue && <Chips labels={value.multiValue} />;
+    case "CustomFieldNumber":
+      return value.numberValue?.toString();
+    case "CustomFieldOptional":
+      return <Chip label={value.optionValue} />;
+    case "CustomFieldString":
+      return value.stringValue;
+    case "CustomFieldRichText":
+      return (
+        <span
+          dangerouslySetInnerHTML={{
+            __html: value.richContent.trixHtml,
+          }}
+        />
+      );
+    case "CustomFieldEmployee":
+      return <EmployeeAvatar employee={value.employee} />;
+  }
+};
+
+
+Grid component:
+https://gist.github.com/mayyyc/a709d96f9c41ac4b49e26a6bd411b018
+
+interface IGridProps {
+  listMembers: CompanyListMemberRowFragment[];
+  customFields: CustomFieldSchema[];
+}
+export const Grid: React.FC<IGridProps> =
+  ({
+    listMembers,
+    customFields,
+  }) => {
+    const rows = getCompanyListGridRows(listMembers);
+    const [columnDefs, setColumnDefs] = useState<any[]>([]);
+    useEffect(() => {
+      setColumnDefs(getCompanyListGridColumns(customFields));
+    }, [customFields]);
+    return (
+            <AgGridReact
+              gridOptions={gridOptions}
+              columnDefs={columnDefs}
+              rowData={rows}
+            />
+    );
+  };
