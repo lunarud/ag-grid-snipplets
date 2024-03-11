@@ -1,0 +1,107 @@
+Row grouping when you have cell renderer — AG Grid with React and Typescript
+
+https://medium.com/nexl-engineering/row-grouping-when-you-have-cell-renderer-ag-grid-with-react-and-typescript-cabba1722952
+
+The Problem
+Row grouping doesn’t work when your data are not simple strings but complex objects, and it is not straight forward how to implement it from the documentation. So hopefully my struggle can make your life a little easier now.
+The Solution
+Key 1 — groupColumnCellRenderer
+In gridOptions, we should have something like below. It specifies how you want to render the group label. And you can make it return a fancy component if you like, the only thing is it doesn’t contain row data but only the value of the column you group by. Try console.log(props) in the cell renderer function, you will see what information you have on the group.
+
+{
+  ...,
+  frameworkComponents: {
+    ...,
+    groupColumnCellRenderer: (props) => props.value,
+    ...
+  },
+  autoGroupColumnDef: {
+    cellRendererParams: {
+      innerRenderer: "groupColumnCellRenderer",
+    },
+    pinned: "left",
+  },
+  rowGroupPanelShow: "always",
+  ...
+}
+
+
+Key 2 — valueGetter
+You need valueGetter in your columnDef when the cell value is not a simple value of string or number. For example, you have a row like this:
+
+{
+  company: {id: "000", domain: "company.com", name: "good company"}
+}
+
+And in you columnDef, you will need to have a valueGetter like this:
+{
+  field: "company", 
+  valueGetter: (props) => props.data.company.domain, 
+  cellRenderer: "companyCellRenderer"
+}
+
+And in <CompanyCellRenderer />, you have to do it again:
+
+
+export const CompanyCellRenderer = (props: ICellRendererParams) => {
+  if (!props.data) return null;
+  const company = props.data.company;
+  return (
+    <div>
+      <p>{company.domain}</p>
+      <p>{company.name}</p>
+    </div>
+  );
+};
+
+I found it quite repetitive to do it for every column so in the end I refactor the row to something like this:
+
+{
+  contact: each.contact.name,
+  company: each.company.domain, // this saves us writing valueGetter
+  ...,
+  rawData: each // and we pass everything in here for cell renderers
+}
+
+export const CompanyCellRenderer = (props: ICellRendererParams) => {
+  if (!props.data) return null;
+  const company = props.data.rawData.company;
+  return (
+    <div>
+      <p>{company.domain}</p>
+      <p>{company.name}</p>
+    </div>
+  );
+};
+
+In this way, we won’t need to write any value getters.
+
+Key 3 — cell renderer
+This took me half day to figure out, basically in <CompanyCellRenderer />, you need to check if props.data exists or not. The reason for this is the group row doesn’t have props.data any only has props.value that we mentioned in the first key point. And the value is the value of which you group by. Say you group by company, one of props.value will be “company.com”(domain of the company).
+
+
+export const CompanyCellRenderer = (props: ICellRendererParams) => {
+  if (!props.data) return null;
+  const company = props.data.rawData.company;
+  return (
+    <div>
+      <p>{company.domain}</p>
+      <p>{company.name}</p>
+    </div>
+  );
+};
+
+
+
+gridOptions.ts
+https://gist.github.com/mayyyc/d49c3b57b1019b2a7052dc07af517cdd
+rowData.ts
+https://gist.github.com/mayyyc/a22d3ccc0bbde3744ec1921c9f4c31c7
+CompanyCellRenderer.tsx
+https://gist.github.com/mayyyc/b4696702c706eb7bca54dae4a3e2ebe1
+
+
+
+
+
+
