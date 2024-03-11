@@ -1,0 +1,83 @@
+https://stackoverflow.com/questions/32861673/displaying-nested-json-in-ag-grid
+
+Take a look at this updated plunker.
+// main.js
+var app = angular.module('myApp', ['agGrid']);
+app.controller('MyCtrl', ['$scope', '$http',
+function($scope, $http) {
+$scope.myData = [
+  {
+    "defaultColumns1": {"region":"PA"},
+    "defaultColumns2": {"LocationName": "loc1",
+    "LegalName": "legName1"},
+    "name":"name1"
+  },
+  {
+    "defaultColumns1": {"region":"PB"},
+    "defaultColumns2": {"LocationName": "loc2",
+    "LegalName": "legName2"},
+    "name":"name2"
+  }
+];
+
+$scope.gridOptions = {
+  rowData: $scope.myData,
+  columnDefs: [
+    {
+      headerName: 'Name',
+      field: 'name'
+    },
+    {
+      headerName: 'Region',
+      valueGetter: 'data.defaultColumns1.region'
+    }, 
+    {
+      valueGetter: 'data.defaultColumns2.LocationName',
+      headerName: 'Location',
+      headerGroup: 'address'
+    }, 
+    {
+      valueGetter: 'data.defaultColumns2.LegalName',
+      headerName: 'Legal Name',
+      headerGroup: 'address'
+    },
+  ],
+  enableColumnResize: true,
+  groupHeaders : true
+};
+}]);
+
+
+
+/*style.css*/
+.gridStyle {
+    border: 1px solid rgb(212,212,212);
+    width: 1000px; 
+    height: 200px
+}
+
+.container {
+ margin-top: 20px; 
+}
+
+.ngGrid {
+  width: 800px;
+}
+.ag-header-cell {
+	background: none repeat scroll 0 0 #53555A;
+	border: 1px solid #DDDDDD;
+	color: #FFFFFF;
+	font-weight: lighter;
+	line-height: 15px;
+}
+
+.ag-header-cell-grouped{
+	background: none repeat scroll 0 0 #53555A;
+	border: 1px solid #DDDDDD;
+	color: #FFFFFF;
+	font-weight: lighter;
+	line-height: 15px;
+}
+
+
+
