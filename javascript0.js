@@ -10,6 +10,15 @@ const sum = numbers.reduce((accumulator, currentValue) => {
 
 console.log(sum); // Output: 15 (1 + 2 + 3 + 4 + 5)
 ********************************
+  
+var store = [0, 1, 2, 3, 4];
+
+var stored = store.reduce(function(pV, cV, cI){
+  console.log("pv: ", pV);
+  pV.push(cV);
+  return pV; // *********  Important ******
+}, []);
+********************************
 
 function parseJsonPath(json, path) {
   // Split the path into individual components
