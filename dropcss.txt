@@ -1,0 +1,75 @@
+  <mat-form-field appearance="outline" class="w-317">
+    <mat-select panelClass="record-sale-seller-select-panel" formControlName="seller" placeholder="{{ 'RECORD-SALE-MODAL.PLACEHOLDER.SELLER' | transloco }}"
+      required>
+      <mat-option *ngFor="let seller of sellers" [value]="seller" (click)="getSellerLots(seller)">
+        {{seller.accountName}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+        <mat-form-field  appearance="outline" class="w-505" >
+    <mat-select panelClass="record-sale-units-select-panel" formControlName="units" [value]="selectedUnits"
+      placeholder="{{ 'RECORD-SALE-MODAL.PLACEHOLDER.UNITS-FOR-SELL' | transloco }}" required>
+      <mat-option *ngFor="let unit of selectedUnits" [value]="unit">{{unit.name}}</mat-option>
+    </mat-select>
+  </mat-form-field>
+        
+  *********
+/======================= Mat select panel styling =============//
+.record-sale-units-select-panel {
+  background: rgba(255, 0, 0, 0.5);
+  margin-top: 48px;
+
+}
+
+.record-sale-seller-select-panel {
+  background: rgba(81, 255, 0, 0.585);;
+  margin-top: 48px;
+  min-width: calc(80% + 120px) !important;
+  margin-left: 30px !important;
+}
+
+
+<div>
+<mat-form-field appearance="outline">
+<mat-label>Normal</mat-label>
+    <mat-select>
+    <mat-option value="0">0%</mat-option>
+    <mat-option value="20">20%</mat-option>
+    </mat-select>
+</mat-form-field>
+</div>
+
+
+<div style="font-size: 12px"><mat-form-field  appearance="outline">
+<mat-label>Reduced</mat-label>
+    <mat-select>
+    <mat-option value="0">0%</mat-option>
+    <mat-option value="20">20%</mat-option>
+    </mat-select>
+</mat-form-field>
+</div>
+
+  *********
+
+  @import '~@angular/material/prebuilt-themes/deeppurple-amber.css';
+
+body { 
+  font-family: Roboto, Arial, sans-serif;
+  margin: 0;
+}
+
+.basic-container {
+  padding: 5px;
+}
+
+.version-info {
+  font-size: 8pt;
+  float: right;
+}
+
+.mat-select-content{
+   width:2000px !important;
+   background-color: red !important;
+   font-size: 14px !important;
+ } 
