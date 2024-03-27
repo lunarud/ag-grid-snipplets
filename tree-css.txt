@@ -1,0 +1,15 @@
+
+Simply by overriding their css:
+
+.mat-tree-node { min-height: 30px }
+
+.mat-tree-node {
+  min-height: 1.2em !important;
+  height: 1.2em;
+}
+
+mat-tree-node {
+    max-height: 16px
+}
+
+https://github.com/jamesonsaunders/mat-tree-simple/blob/master/src/app/app.component.scss
