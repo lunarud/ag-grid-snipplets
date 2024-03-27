@@ -1,0 +1,111 @@
+https://github.com/ale-fuentes-ar/rxjs-storepattern
+
+import { Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
+
+import { Product } from '../models/product';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class StoreService {
+
+  // this list where I save the product selected by the user
+  private myList: Product[] = [];
+  // this is myBag where all selected product flow
+  private myBag = new BehaviorSubject<Product[]>([]);
+
+  // this is my observable object, where all components can see the products flow
+  myBag$ = this.myBag.asObservable();
+
+  constructor() { }
+
+  addProduct(product: Product){
+    // add a new product in my bag
+    this.myList.push(product);
+    // emmit and update my behaviorSubject object the 'myBag'.
+    this.myBag.next(this.myList);
+  }
+
+}
+ 
+*******************
+
+import { Component, OnInit } from '@angular/core';
+import { Product } from 'src/app/models/product';
+import { ProductsService } from 'src/app/services/products.service';
+// importing dependenci of Store service
+import { StoreService } from 'src/app/services/store.service';
+
+@Component({
+  selector: 'app-products',
+  templateUrl: './products.component.html',
+  styleUrls: ['./products.component.css']
+})
+export class ProductsComponent implements OnInit {
+
+  private products: Product[] = [];
+
+  constructor(
+    private productService: ProductsService,
+    // injecting Store service in my component
+    private storeService: StoreService,
+  ) { }
+
+  ngOnInit() {
+    this.getProducts();
+  }
+
+  getProducts() {
+    this.productService.getProducts().subscribe(data => {
+      this.products = data;
+    });
+  }
+
+  addProductToBag(product: Product) {
+    // add product in my Observable
+    this.storeService.addProduct(product);
+  }
+}
+
+
+*******************
+<div class="card-body">
+    <h5 class="card-title">{{ product.title }}</h5>
+    <p class="card-text">{{ product.description }}</p>
+    <!-- this click call method that add new product in Store service -->
+    <button (click)="addProductToBag(product)" class="btn btn-primary">Add to Bag</button>
+</div>
+
+*******************
+import { Component, OnInit } from '@angular/core';
+
+// importing dependenci of Store service
+import { StoreService } from 'src/app/services/store.service';
+
+@Component({
+  selector: 'app-sidebar',
+  templateUrl: './sidebar.component.html',
+  styleUrls: ['./sidebar.component.css']
+})
+export class SidebarComponent implements OnInit {
+
+  // See subscribe form Store service
+  myBag$ = this.storeService.myBag$;
+
+  constructor(
+    // injecting Store service in my component
+    private storeService: StoreService,
+  ) { }
+
+  ngOnInit() {
+  }
+
+}
+*******************
+
+<div class="item-product" *ngFor="let product of (myBag$  | async)">
+    <img [src]="product.images[0]" alt="">
+    <p>{{ product.title }}</p>
+</div>
+
