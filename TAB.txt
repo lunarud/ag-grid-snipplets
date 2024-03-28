@@ -1,0 +1,29 @@
+
+.mat-tab-label {
+    border: 1px solid transparent;
+    border-top-left-radius: .25rem;
+    border-top-right-radius: .25rem;
+}
+
+.mat-tab-label-active {
+   color: #495057;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.mat-ink-bar {
+  display: none;
+}
+
+.mt {
+  align-items: center;   
+  box-shadow: 0px 1px 1px inset midnightblue;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 3em;
+  height: 27px;
+  justify-content: center;
+  opacity: 0.6;
+  white-space: nowrap;
+}
