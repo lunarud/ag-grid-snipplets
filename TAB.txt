@@ -27,3 +27,45 @@
   opacity: 0.6;
   white-space: nowrap;
 }
+
+/* Custom Dropdown Styles to Align with Salesforce Theme */
+.mat-select {
+    border: 1px solid transparent;
+    border-radius: .25rem;
+    height: 27px;
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    background-color: #f8f9fa; /* Light background to match Salesforce's light theme */
+    color: #0070d2; /* Salesforce primary blue for text */
+}
+
+.mat-select:focus {
+    border-color: #dee2e6;
+    outline: none;
+}
+
+.mat-select-panel {
+    border-radius: .25rem;
+    box-shadow: 0px 1px 1px midnightblue;
+    border: 1px solid #dee2e6;
+    color: #0070d2; /* Ensuring dropdown options also use the Salesforce primary blue */
+}
+
+.mat-option {
+    height: 27px; /* Matching option height to the dropdown trigger button for consistency */
+    align-items: center;
+    display: flex;
+    color: #0070d2; /* Ensuring consistent text color across all dropdown options */
+}
+
+/* Adjusting the selected value text color to Salesforce's darker blue */
+.mat-select-value-text {
+    color: #16325c; /* A darker Salesforce blue for selected/active text */
+}
+
+/* Hide the underline effect */
+.mat-select-underline {
+    display: none;
+}
+
