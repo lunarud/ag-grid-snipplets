@@ -1,0 +1,550 @@
+/* You can add global styles to this file, and also import other style files */
+//@import '../node_modules/@angular/material/prebuilt-themes/indigo-pink.css';
+//@use './path/to/carousel-theme' as carousel;
+//@include carousel.theme($my-theme);
+
+@use '@angular/material' as mat; 
+@use 'sass:map';
+@use "@material/button";
+@use "@material/density";
+@use "@material/animation";
+@use "@material/select";
+ 
+//#f5f7f7
+
+//--ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+
+
+@include mat.core(); 
+@include mat.strong-focus-indicators((
+  border-style: none,
+  border-width: 4px,
+  border-radius: 2px,
+));
+
+.mat-ripple-element {
+  transition-duration: 0ms !important;
+}
+
+.basic-container {
+  padding: 20px;
+}
+
+.title-bar {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.54);
+}
+ 
+//$height: button.$height + density.$interval * $density-scale;
+/// @example 36px + 4px * (-3) => 24px
+
+//.my-custom-button {
+  // Sets button density scale to `-3`, i.e. button height to `24px`.
+ // @include button.density(-3);
+//}
+  
+$my-palette: mat.$indigo-palette;
+$app-palette: mat.$grey-palette;
+  
+$regular-font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji';
+   
+$sm-typography: mat.define-typography-config(
+  $font-family: $regular-font-family,
+  $button:
+    mat.define-typography-level(
+      $font-size: 12px,
+    )
+);
+
+$sm-theme: mat.define-light-theme(
+  (
+    typography: $sm-typography,
+    density: -2,
+  )
+);
+
+.sm {
+  @include mat.button-density($sm-theme);
+  @include mat.button-typography($sm-theme);
+  @include mat.select-density($sm-theme);
+  @include mat.select-typography($sm-theme);
+  @include mat.option-density($sm-theme);
+  @include mat.option-typography($sm-theme); 
+}
+  
+@mixin mat-select-overrides($sm-theme) {
+  .mat-select-panel {
+    margin-top: 30px;
+    margin-left: 16px;
+    min-width: 100% !important;
+  }
+  .mat-select-value {
+    padding-left: 16px;
+    color: rgb(231, 18, 18);
+  }
+}
+ 
+@mixin density($sm-theme) {
+  $density-scale: theming.get-density-config($sm-theme);
+
+  $form-field-height: mdc-density.prop-value(
+    $density-config: mdc-textfield.$density-config,
+    $density-scale: theming.clamp-density($density-scale, -5),
+    $property-name: height,
+  );
+ 
+  @if ($form-field-height < mdc-textfield.$minimum-height-for-filled-label) {
+    .mat-form-field-appearance-fill .mat-mdc-select-arrow-wrapper {
+      transform: none;
+    }
+  }
+}
+  
+$label-level: mat.define-typography-level(
+  $font-family: 'Open Sans',
+  $font-weight: 800,
+  $font-size: 3rem,
+  $line-height: 1,
+  $letter-spacing: 0.2em
+);
+ 
+
+/* Styles to be applied to buttons */
+$my-custom-button: mat.define-typography-level(
+  $font-family: 'Roboto',
+  $font-weight: 500,
+  $font-size: 2rem,
+  $line-height: 1,
+  $letter-spacing: 'normal'
+);
+
+/* Styles to be applied to input-fields */
+$my-custom-input: mat.define-typography-level(
+  $font-family: 'Roboto',
+  $font-weight: 400,
+  $font-size: 1rem,
+  $line-height: 1,
+  $letter-spacing: 'normal'
+);
+
+ 
+$font-config: mat.define-typography-config();
+
+ 
+  
+$light-primary: mat.define-palette(mat.$grey-palette, 500);
+$light-accent: mat.define-palette(mat.$grey-palette, A200, A100, A400);
+$light-warn: mat.define-palette(mat.$red-palette);
+
+$light-theme: mat.define-light-theme((
+ color: (
+   primary: $light-primary,
+   accent: $light-accent,
+   warn: $light-warn,
+ ),
+ typography: $font-config,
+ density: -3,
+ ));
+   
+$dark-primary: mat.define-palette(mat.$indigo-palette, 500);
+$dark-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400);
+$dark-warn:mat.define-palette(mat.$pink-palette, A200, A100, A400);
+$dark-theme: mat.define-dark-theme((
+ color: (
+   primary: $dark-primary,
+   accent: $dark-accent,
+   warn: $dark-warn,
+ ),
+ typography: mat.define-typography-config(),
+ density: -2,
+));
+
+ 
+@mixin app-typography($typography: $font-config) {
+  @include app-button-typography($typography);
+  @include mat-base-typography($typography);
+  @include mat-card-typography($typography);
+  @include mat-select-typography($typography);
+  @include mat-form-field-typography($typography);
+  @include mat-slide-toggle-typography($typography);
+  @include mat-toolbar-typography($typography);  
+  @include app-root-typography($typography);
+}
+ 
+@mixin mat-select-color($light-theme) {
+  $config: mat-get-color-config($light-theme);
+  $foreground: map-get($config, foreground);
+  $background: map-get($config, background);
+  $primary: map-get($config, primary);
+  $accent: map-get($config, accent);
+  $warn: map-get($config, warn);
+
+  .mat-select-value {
+    color: mat-color($foreground, text);
+  }
+
+  .mat-select-placeholder {
+    color: mat-private-control-placeholder-color($config);
+  }
+
+  .mat-select-disabled .mat-select-value {
+    color: mat-color($foreground, disabled-text);
+  }
+
+  .mat-select-arrow {
+    color: mat-color($foreground, secondary-text);
+  }
+
+  .mat-select-panel {
+    background: mat-color($background, card);
+    @include mat-private-theme-overridable-elevation(4, $config);
+
+    .mat-option.mat-selected:not(.mat-option-multiple) {
+      background: mat-color($background, hover, 0.12);
+    }
+  }
+
+  .mat-form-field {
+    &.mat-focused {
+      &.mat-primary .mat-select-arrow {
+        color: mat-color($primary, text);
+      }
+
+      &.mat-accent .mat-select-arrow {
+        color: mat-color($accent, text);
+      }
+
+      &.mat-warn .mat-select-arrow {
+        color: mat-color($warn, text);
+      }
+    }
+
+    .mat-select.mat-select-invalid .mat-select-arrow {
+      color: mat-color($warn, text);
+    }
+
+    .mat-select.mat-select-disabled .mat-select-arrow {
+      color: mat-color($foreground, disabled-text);
+    }
+  }
+}
+
+@mixin mat-select-typography($light-theme) {
+  $config: mat-get-typography-config($light-theme);
+  // The unit-less line-height from the font config.
+  $line-height: mat-line-height($config, input);
+
+  .mat-select {
+    font-family: mat-font-family($config);
+  }
+
+  .mat-select-trigger {
+    height: $line-height * 1em;
+  }
+}
+
+@mixin _mat-select-density($light-theme) {
+  density: -2
+}
+
+@mixin mat-select-theme($light-theme) {
+  $theme: mat-private-legacy-get-theme($light-theme);
+  @include mat-private-check-duplicate-theme-styles($theme, 'mat-select') {
+    $color: mat-get-color-config($theme);
+    $density: mat-get-density-config($theme);
+    $typography: mat-get-typography-config($theme);
+
+    @if $color != null {
+      @include mat-select-color($color);
+    }
+    @if $density != null {
+      @include _mat-select-density($density);
+    }
+    @if $typography != null {
+      @include mat-select-typography($typography);
+    }
+  }
+}
+
+
+/* Apply custom config */
+@include mat.all-component-typographies($font-config);
+
+  
+// Apply the dark theme by default
+@include mat.core-theme($dark-theme);
+//@include mat.button-theme($dark-theme);
+@include mat.all-component-themes($light-theme);
+//@include typography($light-theme);
+
+  
+@mixin typography($theme) {
+  $custom-typography-config: mat.get-typography-config($theme);
+  
+  .mat-mdc-form-field {
+      @include mat.typography-level($custom-typography-config, 'mat-body')
+  }
+}
+ 
+@mixin color($theme) {
+  .nav-button {
+    color: blue  !important;;
+  }
+}
+
+@mixin typography($theme) {
+  .nav-button {
+    font-size: 12px  !important;;
+  }
+}
+
+@mixin typography($theme) {
+  .my-carousel {
+    // Get the headline font from the theme.
+    font: mat.get-theme-typography($theme, headline-1);
+  }
+}
+
+.mat-button, .mat-stroked-button {
+  font-family:  '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji';
+  font-size: 12px;  
+  margin: 8px 8px 8px 0; 
+}
+
+.button-row {
+  color: blue  !important;
+  display: table-cell;
+  width: 490px;
+  font-family:  '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji';
+  font-size: 12px;  
+  margin: 8px 8px 8px 0; 
+}
+
+.button-row .mat-button-base {
+  color: blue  !important;
+  display: table-cell;
+  width: 490px;
+  font-family:  '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji';
+  font-size: 12px;  
+  margin: 8px 8px 8px 0; 
+}
+
+  
+.my-custom-panel-class .mat-select-panel { 
+  max-width: fit-content; 
+}
+ 
+.mat-form-field {
+  margin-top: 0.0px !important;
+  padding-top: 0px !important;
+  padding-bottom: 0px !important;
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+  height: 3.5em !important;
+  max-height: 3.5em !important;
+  min-height: 3.5em !important;
+  width: auto !important;
+  max-width: 100% !important;
+  color: rgb(0, 0, 0) !important;
+}
+
+.mat-select {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  cursor: pointer !important;
+  color: rgb(0, 0, 0) !important;
+  font-size: 12px;
+}
+
+.mat-select-content {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  cursor: pointer !important;
+  padding-left: 1em !important;
+  padding-right: 1em !important;
+  color: rgb(144, 0, 255) !important;
+}
+
+.mat-select-placeholder {
+  color: rgb(188, 9, 9) !important;
+}
+
+::ng-deep .mat-select-value {
+  width: auto;
+  max-width: 100% !important;
+  color: rgb(144, 149, 0) !important;
+}
+
+::ng-deep .mat-select-value-text {
+  color: rgb(52, 202, 147) !important;
+}
+
+.mat-select-panel {
+  color: rgb(125, 125, 125) !important;
+}
+
+.mat-select-trigger {
+  color: rgb(125, 125, 125) !important;
+}
+
+.mat-option {
+  color: rgb(255, 16, 108) !important;
+  height: 1.75em !important;
+  min-height: 1.75em !important;
+  max-height: 1.75em !important;
+  font-size: 12px;
+}
+
+.mat-select:hover {
+  cursor: pointer !important;
+}
+
+.mat-select:active {
+  cursor: pointer !important;
+}
+
+ 
+.dense-0 { 
+   padding: 8px; 
+   font-size: 14px; 
+   line-height: 1.5;
+  @include mat.select-density(0.8);
+   line-height: 2.0;
+   color:rgb(114, 40, 224);
+}
+
+.dense-1 {
+  @include mat.select-density(-1);
+  color:rgb(200, 229, 12);
+}
+
+.dense-2 {
+  @include mat.select-density(-2);
+  color:rgb(59, 255, 10);
+}
+ 
+//.the-dense-zone {
+//  @include mat.button-density(-1); 
+//}
+  // factor: 0.8,
+
+  .custom-density {
+    /* Adjust padding */
+    padding: 8px;
+    /* Modify font sizes */
+    font-size: 12px;
+    /* Adjust line height */
+    line-height: 1.5;
+  }
+
+// Apply the light theme only when the user prefers light themes.
+//@media (prefers-color-scheme: light) {
+ // Use the `-color` mixins to only apply color styles without reapplying the same
+ // typography and density styles.
+ //@include mat.core-color($light-theme);
+ //@include mat.button-color($light-theme);
+//}
+section {
+  display: table;
+}
+
+.a-example-label {
+  display: table-cell;
+  font-size: 14px;
+  margin-left: 8px;
+  min-width: 120px;
+  color: green
+}
+
+.example-label {
+  display: table-cell;
+  font-size: 14px;
+  margin-left: 8px;
+  min-width: 120px;
+}
+
+.example-button-row {
+  display: table-cell;
+  width: 490px;
+}
+
+.example-button-row .mat-button-base {
+  margin: 8px 8px 8px 0;
+}
+
+.example-flex-container {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.example-button-container {
+  display: flex;
+  justify-content: center;
+  width: 120px;
+}
+
+.example-tree-invisible {
+    display: none;
+  }
+  
+  .example-tree ul,
+  .example-tree li {
+    margin-top: 0;
+    margin-bottom: 0;
+    list-style-type: none;
+  }
+  
+  /*
+   * This padding sets alignment of the nested nodes.
+   */
+  .example-tree .mat-nested-tree-node div[role=group] {
+    padding-left: 40px;
+  }
+  
+  /*
+   * Padding for leaf nodes.
+   * Leaf nodes need to have padding so as to align with other non-leaf nodes
+   * under the same parent.
+   */
+  .example-tree div[role=group] > .mat-tree-node {
+    padding-left: 40px;
+  }
+
+  .example-container {
+    
+    height: 500px;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+  }
+  .example-sidenav-content {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+  }
+  .example-sidenav {
+    width: 500px;
+     user-select: none; 
+  }
+  .full-width {
+    width: 100%;
+  }
+  .menu-button {
+    transition: 300ms ease-in-out;
+    transform: rotate(0deg);
+  }
+  .menu-button.rotated {
+    transform: rotate(180deg);
+  }
+  .submenu {
+    overflow-y: hidden;
+    transition: transform 300ms ease;
+    transform: scaleY(0);
+    transform-origin: top;
+    padding-left: 30px;
+  }
+  .submenu.expanded {
+    transform: scaleY(1);
+  } 
