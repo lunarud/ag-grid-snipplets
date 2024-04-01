@@ -1,0 +1,114 @@
+  
+<mat-sidenav-container class="example-container" autosize>
+	<mat-sidenav #sidenav class="example-sidenav" mode="side" opened="true" (mouseenter)="mouseenter()" (mouseleave)="mouseleave()">
+		<mat-nav-list style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">  
+		  
+			<p class="sidebar-title">Main</p> 
+			  <mat-accordion style="background-color:#f5f7f7;">
+				<mat-expansion-panel *ngFor="let item of itemsIt"
+				  (opened)="item.panelOpenState = true"
+				  (closed)="item.panelOpenState = false" style="background-color:#f5f7f7;">
+				  <mat-expansion-panel-header style="background-color:#f5f7f7;">
+					<mat-panel-title style="background-color:#f5f7f7;">
+						<div style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">{{item.title}}</div>
+					</mat-panel-title> 
+				  </mat-expansion-panel-header>
+				  {{ item.content }}
+				</mat-expansion-panel> 
+			  </mat-accordion>
+
+			  <p class="sidebar-title">Applications</p> 
+			  <input [(ngModel)]="searchString" />
+				<mat-tree [dataSource]="dataSource" [treeControl]="treeControl" style="background-color:#f5f7f7;">
+				<mat-tree-node style="background-color:#f5f7f7;"
+					*matTreeNodeDef="let node"
+					[style.display]="filterLeafNode(node) ? 'none' : 'block'"
+					matTreeNodeToggle
+					matTreeNodePadding
+					matTreeNodePaddingIndent="20">
+					<button class="button__arrow" mat-icon-button disabled style="background-color:#f5f7f7;"></button>
+					<mat-checkbox style="background-color:#f5f7f7;"
+					class="checklist-leaf-node"
+					[checked]="checklistSelection.isSelected(node)"
+					(change)="todoLeafItemSelectionToggle(node)">
+					<div style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size:x-small;background-color:#f5f7f7;">{{node.item}}</div>
+					</mat-checkbox>
+				</mat-tree-node>
+
+				<mat-tree-node style="background-color:#f5f7f7;"
+					*matTreeNodeDef="let node; when: hasChild"
+					[style.display]="filterParentNode(node) ? 'none' : 'block'"
+					matTreeNodePadding
+					matTreeNodePaddingIndent="20"
+				>
+					<button style="background-color:#f5f7f7;"
+					class="button__arrow"
+					mat-icon-button
+					matTreeNodeToggle
+					[attr.aria-label]="'Toggle ' + node.item"
+					>
+					<mat-icon class="mat-icon-rtl-mirror" style="background-color:#f5f7f7;">
+						{{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+					</mat-icon>
+					</button>
+					<mat-checkbox style="background-color:#f5f7f7;"
+					[checked]="descendantsAllSelected(node)"
+					[indeterminate]="descendantsPartiallySelected(node)"
+					(change)="todoItemSelectionToggle(node)"><div style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size:x-small;background-color:#f5f7f7;">{{node.item}}</div></mat-checkbox>
+				</mat-tree-node>
+				</mat-tree>
+
+ 
+		</mat-nav-list> 
+	</mat-sidenav> 
+	<div class="example-sidenav-content"> 
+		 <div class="content" style="width: 100%; height: 100%;">  
+			<mat-card appearance="outlined" class="employee-table-wrapper" style="background-color:#f5f7f7;"> 
+				<div class="row mat-typography" > 
+					<div class="button-row" > 
+						<button class="hamburger mat-button" style="color:#9e9e9e;font-size: x-small;background-color:#f5f7f7;" (click)="toggle()" mat-button>
+							<mat-icon>menu</mat-icon>
+							</button>
+						<button mat-button style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">Clear</button>
+						<button mat-button style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">Search</button>
+						<button mat-button style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">Rest</button>
+						<button mat-button style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">Search</button>
+						<mat-slide-toggle> <div style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">Pivot View</div></mat-slide-toggle>
+					  </div>
+				</div>
+			</mat-card>  
+
+			<mat-card appearance="outlined" class="employee-table-wrapper"> 
+			<div class="container"> 
+				<div class="row" style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">
+					<br>
+					</div> 
+				<div class="row" style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">
+						<div class="col-md-3">
+						<div class="form-group" style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">
+							<label for="name" style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">Name</label>
+							<input type="text" class="form-control" id="name" name="name"></div>
+					  </div>
+					   
+					  <div class="col-md-9"></div> 
+				</div> 
+				<div class="row" style="color:rgba(0, 0, 0, 0.54);font-weight:600;font-size: small;background-color:#f5f7f7;">
+				<br>
+				</div> 
+			</div> 
+		   </mat-card>  
+
+			<mat-card appearance="outlined" class="employee-table-wrapper">  
+				<mat-card-content class="employee-table__content">
+					<ag-grid-angular
+					style="width: 100%; height: 500px;"
+					class="ag-theme-balham"
+					[rowData]="rowData"
+					[columnDefs]="columnDefs" 
+				  ></ag-grid-angular>
+				</mat-card-content>  
+			  </mat-card>  
+		  </div>
+	 </div> 
+</mat-sidenav-container>
+ 
