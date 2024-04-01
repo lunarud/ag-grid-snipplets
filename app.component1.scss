@@ -1,0 +1,250 @@
+$yellow: #ffc260;
+$blue: #536DFE;
+$light-blue: #798DFE;
+$white-blue: #B1BCFF;
+$blue-white: #F3F5FF;
+$pink: #ff4081;
+$dark-pink: #ff0f60;
+$green: #3CD4A0;
+$violet: #9013FE;
+$white: white;
+$dark-grey: #4A4A4A;
+$light-grey: #B9B9B9;
+$grey: #6E6E6E;
+$sky: #c0caff;
+
+$ag-grid-grey: #f5f7f7;
+$ag-grid-header: #f5f7f7;
+
+$white-35: rgba(255, 255, 255, 0.35);
+$white-80: #FFFFFF80;
+
+$gray-08: rgba(110, 110, 110, 0.8);
+$gray-80: #D8D8D880;
+$gray-06: rgba(110, 110, 110, 0.6);
+
+$black-08: rgba(0, 0, 0, 0.08);
+
+$pink-15: rgba(255, 92, 147, 0.15);
+$blue-15: rgba(83, 109, 254, 0.15);
+$green-15: rgba(60, 212, 160, 0.15);
+$yellow-15: rgba(255, 194, 96, 0.15);
+$violet-15: rgba(144, 19, 254, 0.15);
+
+
+$shadow-white: #E8EAFC;
+$shadow-grey: #B2B2B21A;
+$shadow-dark-grey: #9A9A9A1A;
+
+$background-color: #F6F7FF;
+
+$fw-lighter: 400;
+$fw-normal: 500;
+$fw-bold: 600;
+
+
+$fs-xs: 11.2px;
+$fs-small: 14px;
+$fs-normal: 16px;
+$fs-regular: 18px;
+$fs-medium: 21px;
+$fs-large: 24px;
+$fs-xl: 28px;
+$fs-xxl: 38px;
+$fs-xxxl: 42px;
+ 
+
+//== Viewports
+
+$extra-small: 576px;
+$small: 576px;
+$medium: 768px;
+$normal: 1024px;
+$large: 992px;
+$extra-large: 1200px;
+
+
+//== Sidebar
+
+$sidebar-width: 210px;
+$sidebar-font-color: $gray-08;
+$sidebar-font-color-active: $dark-grey;
+$sidebar-background-color-active: $blue-white;
+$sidebar-background-color-hover: $blue-white;
+$sidebar-icon-color-active: $blue;
+$sidebar-icon-color: $gray-06;
+$sidebar-title-color: $sidebar-font-color;
+$sidebar-circle-color: $light-grey;
+
+//== Material Card
+//
+
+$card-font-color: $dark-grey;
+$card-title-font-color: $grey;
+
+//== Material Toolbar
+
+$toolbar-title-font-color: $light-grey;
+$toolbar-button-font-color: $white;
+$toolbar-button-background-color: $pink;
+$toolbar-button-background-color-active: $dark-pink;
+
+//== Material Sidebar Content
+
+$sidebar-content-padding: 48px;
+
+//== Material Tabs
+
+$tabs-header-font-color: $light-grey;
+$tabs-header-font-color-active: $blue;
+$tabs-ink-bar-color: $blue;
+
+
+//== Apex Chart X axis tooltip
+
+$chart-tooltip-background-color: $blue;
+$chart-tooltip-border-color: $blue;
+$chart-tooltip-font-color: $white;
+
+//== Scroll bar
+
+$scrollbar-track-color: $light-grey;
+$scrollbar-track-piece-color: $white;
+$scrollbar-thumb-color: $light-grey;
+$scrollbar-corner-color: $light-grey;
+
+//== Header
+
+$header-background-color: $blue;
+$header-height: 64px;
+$header-button-background-color: $blue;
+$header-button-background-color-hover: $black-08;
+$header-button-font-color: $white;
+$header-title-font-color: $white;
+
+//== Footer
+
+$footer-height: 48px;
+$footer-width: calc(100% - #{$sidebar-content-padding});
+$footer-link-color: $blue;
+$footer-icon-color: $gray-06;
+$footer-icon-background-color-hover: $black-08;
+
+//== Settings menu element
+
+$settings-button-background-color: $white;
+$settings-button-background-color-hover: $blue;
+$settings-button-color: $light-grey;
+$settings-button-color-hover: $white-35;
+$settings-menu-font-color: $dark-grey;
+$settings-menu-background-color-hover: $blue-white;
+  
+
+.mat-form-field {
+  margin-right: 4px;
+}
+
+mat-tree-node {
+  height: 40px !important;
+  min-height: 30px !important;
+}
+
+.mat-tree-node,
+.mat-nested-tree-node {
+  font-weight: 500;
+  font-size: 12px !important;
+}
+
+.button__arrow {
+  width: 24px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+}
+
+:host ::ng-deep .mat-checkbox-inner-container {
+  margin-right: 6px !important;
+  height: 14px !important;
+  width: 14px !important;
+}
+
+.tree {
+  margin-left: 4px;
+}
+
+.tree__root {
+  font-weight: 700;
+  font-size: 13px !important;
+}
+
+button[_ngcontent-ng-c2370707444] {
+  font-family: Arial;
+  background-color: #f5f7f7;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  cursor: hand;
+}
+
+
+.ag-grid-look {
+  background-color: #f5f7f7;
+  border-color: rgba(189, 195, 199, 0.58);
+  border-style: ridge;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-size: 12px;
+}
+
+.search-toolbar {
+  display: flex;
+  align-items: center;
+  border-color: $green;
+  margin-right: 16px;
+  text-transform: uppercase;
+  background-color: $green;
+  color: white; 
+}
+ 
+.search-header {
+  background-color: $ag-grid-grey;
+  border-color: #bdc3c7;
+  border-style: ridge;
+  display: flex;
+  justify-content: space-between;
+  position: fixed;
+  z-index: 2;
+  height: $header-height;
+
+  &__title {
+    display: flex;
+    align-items: center;
+  }
+
+  &__title-button {
+    background-color: $header-button-background-color;
+    box-shadow: none;
+
+    &:hover {
+      background-color: $header-button-background-color-hover;
+    }
+
+    @media (max-width: $small) {
+      margin-top: 0;
+    }
+  }
+
+  &__title-button-icon {
+    color: $header-button-font-color;
+  }
+
+  &__title-text {
+    color: $header-title-font-color;
+    margin-left: 32px;
+    font-weight: $fw-lighter;
+
+    @media (max-width: $small) {
+      display: none;
+    }
+  }
+}
+
