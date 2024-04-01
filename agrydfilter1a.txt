@@ -1,0 +1,44 @@
+<ag-grid-angular
+  style="height: 200px;"
+  class="ag-theme-balham"
+  [rowData]="rowData"
+  [columnDefs]="columnDefs"
+  [animateRows]="true"
+  [isExternalFilterPresent]="isExternalFilterPresent"
+  [doesExternalFilterPass]="doesExternalFilterPass"
+  [rowData]="rowData"
+  (gridReady)="onGridReady($event)"
+>
+</ag-grid-angular>
+
+<mat-form-field>
+  <mat-select
+    (selectionChange)="someMethod2($event.value)"
+    multiple
+    placeholder="customer"
+    [(ngModel)]="selectedName"
+    [compareWith]="comparer"
+  >
+    <mat-option *ngFor="let el of nameArray" [value]="el">
+      {{ el.name }}
+    </mat-option>
+  </mat-select>
+</mat-form-field>
+
+<br>
+
+<mat-form-field>
+  <mat-select
+    (selectionChange)="someMethod2($event.value)"
+    multiple
+    placeholder="permission"
+    [(ngModel)]="selectedPermission"
+    [compareWith]="comparer"
+  >
+    <mat-option *ngFor="let el of permissionArray" [value]="el">
+      {{ el.permission }}
+    </mat-option>
+  </mat-select>
+</mat-form-field>
+
+<br>
