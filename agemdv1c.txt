@@ -1,0 +1,24 @@
+::ng-deep .ag-cell-label-container{flex-direction: row}
+::ng-deep .ag-header-cell-label { flex-direction: row-reverse; }
+
+// ag-grid
+export type OrbAgGridFilterType = 'text' | 'number';
+
+export type OrbAgGridCompareType = string;
+
+export type OrbAgGridFilterStringType = 'startsWith' | 'endsWith' | 'equals' | 'notEqual' | 'contains' | 'notContains' ;
+
+export type OrbAgGridFilterNumberType = 'equals' | 'lessThan' | 'lessThanOrEqual' | 'greaterThan' | 'greaterThanOrEqual' | 'inRange';
+
+export interface OrbAgGridFilterValue {
+  filterType: string;
+  type: OrbAgGridFilterStringType | OrbAgGridFilterNumberType | OrbAgGridCompareType;
+  filter: string;
+}
+
+export type OrbAgGridFilterModel = { [column in string]: OrbAgGridFilterValue}
+
+export interface OrgAgGridFilter {
+  agGridColumn: string;
+  agGridFilterModel: OrbAgGridFilterValue;
+}
