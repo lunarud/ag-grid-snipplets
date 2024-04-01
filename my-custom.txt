@@ -1,0 +1,54 @@
+@use '@angular/material' as mat;
+@use "sass:map";
+
+/* Styles to be applied to buttons */
+$my-custom-button: mat.define-typography-level(
+  $font-family: 'Roboto',
+  $font-weight: 500,
+  $font-size: 2rem,
+  $line-height: 1,
+  $letter-spacing: 'normal'
+);
+
+/* Styles to be applied to input-fields */
+$my-custom-input: mat.define-typography-level(
+  $font-family: 'Roboto',
+  $font-weight: 400,
+  $font-size: 1rem,
+  $line-height: 1,
+  $letter-spacing: 'normal'
+);
+
+/* Merge custom configs into existing config */
+$my-typography-config: map.merge(
+    mat.define-typography-config(
+        /* 'button'-property will work out of the box */
+        $button: $my-custom-button
+    ),
+    (
+        /* 'input'-property will have to be assigned under '@mixin typography' further below */
+        'input': $my-custom-input
+    )
+);
+
+/* Apply custom config */
+@include mat.all-component-typographies($my-typography-config);
+
+/* Let's assign the custom property 'input' that we defined above */
+@mixin typography($theme) {
+    $custom-typography-config: mat.get-typography-config($theme);
+    
+    .mat-mdc-form-field {
+        @include mat.typography-level($custom-typography-config, 'input')
+    }
+}
+
+/* Define custom app-theme based on custom-configs */
+$app-theme: mat.define-light-theme(
+    (
+        typography: $my-typography-config,
+    )
+);
+
+/* Apply custom app-theme */
+@include typography($app-theme);
