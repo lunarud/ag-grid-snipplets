@@ -1,0 +1,163 @@
+import { Component } from '@angular/core';
+import { ColDef, GridApi, GridReadyEvent, RowNode } from 'ag-grid-community';
+import 'ag-grid-community/dist/styles/ag-grid.css';
+import 'ag-grid-community/dist/styles/ag-theme-alpine.css';
+import 'ag-grid-enterprise';
+
+@Component({
+  selector: 'my-app',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss'],
+})
+export class AppComponent {
+  private gridApi!: GridApi;
+  columnDefs = [
+    {
+      headerName: 'Customer Name',
+      field: 'name',
+      sortable: true,
+    },
+    {
+      headerName: 'Activity Log',
+      field: 'tenantid',
+      sortable: true,
+      filter: 'agMultiColumnFilter',
+    },
+    {
+      headerName: 'Change Log',
+      field: 'gdap',
+      sortable: true,
+    },
+    {
+      headerName: 'Entry By',
+      field: 'dap',
+      sortable: true,
+    },
+    {
+      headerName: 'Entry Source',
+      field: 'permission',
+      sortable: true,
+    },
+    {
+      headerName: 'Date/Time',
+      field: 'rolecategory',
+      sortable: true,
+    },
+    {
+      headerName: 'Date/Time',
+      field: 'duration',
+      sortable: true,
+    },
+    {
+      headerName: 'Date/Time',
+      field: 'expiration',
+      sortable: true,
+    },
+    {
+      headerName: 'Date/Time',
+      field: 'relation',
+      sortable: true,
+    },
+    {
+      headerName: 'Date/Time',
+      field: 'autonotify',
+      sortable: true,
+    },
+  ];
+
+  rowData = [
+    {
+      name: 'Manoj',
+      tenantid: 'ID#',
+      gdap: 'status',
+      dap: 'status',
+      permission: 'low',
+      rolecategory: 'identity',
+      duration: '7 days',
+      expiration: '2022-06-02 10:03:32 AM UTC',
+      relation: 'active',
+      autonotify: 'on',
+    },
+    {
+      name: 'Manoj',
+      tenantid: 'ID#',
+      gdap: 'status',
+      dap: 'status',
+      permission: 'high',
+      rolecategory: 'identity',
+      duration: '7 days',
+      expiration: '2022-06-02 10:03:32 AM UTC',
+      relation: 'active',
+      autonotify: 'on',
+    },
+    {
+      name: 'Krishna',
+      tenantid: 'ID#',
+      gdap: 'status',
+      dap: 'status',
+      permission: 'high',
+      rolecategory: 'identity',
+      duration: '7 days',
+      expiration: '2022-06-02 10:03:32 AM UTC',
+      relation: 'expired',
+      autonotify: 'on',
+    },
+    {
+      name: 'Sam',
+      tenantid: 'ID#',
+      gdap: 'status',
+      dap: 'status',
+      permission: 'low',
+      rolecategory: 'identity',
+      duration: '7 days',
+      expiration: '2022-06-02 10:03:32 AM UTC',
+      relation: 'expired',
+      autonotify: 'on',
+    },
+  ];
+
+  originalrowData: any[];
+  selectedName: any = [];
+  selectedPermission: any = [];
+  selectedCheckBox: any = [];
+  permissionArray: any = [];
+  nameArray: any = [];
+
+  ngOnInit() {
+    this.selectedName = [];
+    this.selectedPermission = [];
+    this.originalrowData = this.rowData;
+
+    // this.nameArray = [...new Set(this.originalrowData.map(item => item.name))];
+    // this.nameArray = Array.from(this.nameArray, val => 'name: ' + val);
+    // console.log(this.nameArray);
+
+    this.rowData.forEach(data => {
+      if(!this.nameArray.some(name => name.name === data.name)) {
+        this.nameArray.push({name: data.name})
+      }
+    });
+  
+    this.rowData.forEach(data => {
+      if(!this.permissionArray.some(perm => perm.permission === data.permission)) {
+        this.permissionArray.push({permission: data.permission})
+      }
+    });
+  }
+
+  someMethod2(eve: any) {
+    this.selectedCheckBox = [...this.selectedName, ...this.selectedPermission];
+
+    this.rowData = this.rowData.filter(el => {
+      return this.selectedCheckBox.find(element => {
+         return element.name === el.name
+      });
+    });
+    
+
+    if (this.selectedCheckBox.length === 0) {
+      this.rowData = this.originalrowData;
+    }
+  }
+  
+}
