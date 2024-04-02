@@ -1,0 +1,86 @@
+table {
+  width: 100%;
+}
+div{
+  position: relative;
+}
+h6 {
+  display: inline-block;
+}
+.test{
+  position: absolute;
+  right: 0;
+  bottom: 20px;
+
+}
+::ng-deep .highlight-search-text{
+  color:red;
+}
+
+<input
+  minlength="2"
+  (keyup)="applyFilter($event.target['value'])"
+  placeholder="Filter"
+  #input
+/>
+<table mat-table [dataSource]="data" class="mat-elevation-z8" >
+  
+  <ng-container matColumnDef="name"  >
+    
+    <th mat-header-cell *matHeaderCellDef >
+    <!-- {{data.data | json}} -->
+      <span [style.paddingLeft.px]="40"> Name </span>
+    </th>
+   
+    <td mat-cell *matCellDef="let data" class="note"   >
+      <!-- <mat-checkbox
+        [checked]="descendantsAllSelected(data)"
+        (change)="todoItemSelectionToggle(data)"
+      ></mat-checkbox> -->
+     
+      <mat-checkbox
+      
+  
+      class="checklist-leaf-node"
+      [checked]="checklistSelection.isSelected(data)"
+      (change)="todoItemSelectionToggle(data);"
+    ></mat-checkbox> 
+      <button
+        mat-icon-button
+        [style.visibility]="!data.expandable ? 'hidden' : ''"
+        [style.marginLeft.px]="data.level * 32"
+        (click)="treeControl.toggle(data)"
+      >
+        <mat-icon class="mat-icon-rtl-mirror">
+          {{treeControl.isExpanded(data) ? 'expand_more' : 'chevron_right'}}
+        </mat-icon>
+      </button>
+      <span [innerHTML]="data.name | highlight : search"></span>
+      <!-- {{data.name}} -->
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="count">
+    <th mat-header-cell *matHeaderCellDef>Count</th>
+    <td mat-cell *matCellDef="let data">{{data.count}}</td>
+  </ng-container>
+  <ng-container matColumnDef="quanity">
+    <th mat-header-cell *matHeaderCellDef>quantity</th>
+    <td mat-cell *matCellDef="let data;index as i" (click)="getprice(data)">
+      <ng-container>
+        <!-- <input type="text" [(ngModel)]="num" /> -->
+
+        {{data.product | json}}
+      </ng-container>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+</table>
+
+<!-- Copyright 2018 Google Inc. All Rights Reserved.
+    Use of this source code is governed by an MIT-style license that
+    can be found in the LICENSE file at http://angular.io/license -->
+
+
