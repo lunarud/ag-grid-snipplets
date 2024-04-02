@@ -1,0 +1,147 @@
+import { FlatTreeControl } from '@angular/cdk/tree';
+import { Component } from '@angular/core';
+import {
+  MatTreeFlatDataSource,
+  MatTreeFlattener,
+} from '@angular/material/tree';
+import { SelectionModel } from '@angular/cdk/collections';
+
+interface FoodNode {
+  name: string;
+  count?: number;
+  children?: FoodNode[];
+}
+
+const TREE_DATA: FoodNode[] = [
+  {
+    name: 'Fruit',
+    children: [
+      { name: 'Apple', count: 10 },
+      { name: 'Banana', count: 20 },
+      { name: 'Fruit loops', count: 30 },
+    ],
+  },
+  {
+    name: 'Vegetables',
+    children: [
+      {
+        name: 'Green',
+        children: [
+          { name: 'Broccoli', count: 10 },
+          { name: 'Brussel sprouts', count: 20 },
+        ],
+      },
+      {
+        name: 'Orange',
+        children: [
+          { name: 'Pumpkins', count: 30 },
+          { name: 'Carrots', count: 40 },
+        ],
+      },
+    ],
+  },
+];
+
+interface ExampleFlatNode {
+  expandable: boolean;
+  name: string;
+  count: number;
+  quantity: number;
+  level: number;
+  children: Array<FoodNode>;
+}
+
+/**
+ * @title Basic use of `<table mat-table>`
+ */
+@Component({
+  selector: 'table-basic-example',
+  styleUrls: ['table-basic-example.css'],
+  templateUrl: 'table-basic-example.html',
+})
+export class TableBasicExample {
+  data: any;
+  displayedColumns: string[] = ['name', 'count'];
+
+  private transformer = (node: FoodNode, level: number) => {
+    return {
+      expandable: !!node.children && node.children.length > 0,
+      name: node.name,
+      count: node.count,
+      level: level,
+      children: node?.children,
+    };
+  };
+
+  treeControl = new FlatTreeControl<ExampleFlatNode>(
+    (node) => node.level,
+    (node) => node.expandable
+  );
+
+  treeFlattener = new MatTreeFlattener(
+    this.transformer,
+    (node) => node.level,
+    (node) => node.expandable,
+    (node) => node.children
+  );
+
+  dataSource = new MatTreeFlatDataSource(this.treeControl, this.treeFlattener);
+  checklistSelection = new SelectionModel<ExampleFlatNode>(true /* multiple */);
+  nodeSelected: boolean = false;
+
+  constructor() {
+    console.log(this.dataSource);
+    this.dataSource.data = TREE_DATA;
+    this.data = this.dataSource;
+    // console.log(this.data)
+  }
+  /** Checks if datasource for material tree has any child groups */
+  hasNestedChild = (_: number, nodeData: FoodNode) =>
+    nodeData.children.length > 0;
+  /** Whether the number of selected elements matches the total number of rows. */
+  isAllSelected() {
+    const numSelected = this.checklistSelection.selected.length;
+    const numRows = this.treeControl.dataNodes.length;
+    return numSelected === numRows;
+  }
+
+  /** Selects all rows if they are not all selected; otherwise clear selection. */
+  masterToggle() {
+    if (this.checklistSelection.selected.length) {
+      this.checklistSelection.clear();
+      return;
+    }
+
+    this.checklistSelection.select(...this.treeControl.dataNodes);
+  }
+
+  hasChild = (_: number, node: ExampleFlatNode) => node.expandable;
+
+  /** Whether all the descendants of the node are selected */
+  descendantsAllSelected(node: any): boolean {
+    const descendants = this.treeControl.getDescendants(node);
+    return descendants.every((child) =>
+      this.checklistSelection.isSelected(child)
+    );
+  }
+
+  /** Whether part of the descendants are selected */
+  descendantsPartiallySelected(node: any): boolean {
+    const descendants = this.treeControl.getDescendants(node);
+    const result = descendants.some((child) =>
+      this.checklistSelection.isSelected(child)
+    );
+    return result && !this.descendantsAllSelected(node);
+  }
+  todoItemSelectionToggle(node: any): void {
+    this.checklistSelection.toggle(node);
+    const descendants = this.treeControl.getDescendants(node);
+    this.checklistSelection.isSelected(node)
+      ? this.checklistSelection.select(...descendants)
+      : this.checklistSelection.deselect(...descendants);
+  }
+}
+
+/**  Copyright 2018 Google Inc. All Rights Reserved.
+    Use of this source code is governed by an MIT-style license that
+    can be found in the LICENSE file at http://angular.io/license */
