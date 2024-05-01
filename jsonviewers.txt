@@ -1,0 +1,33 @@
+0) https://github.com/ryshu/jsonpath-picker/
+https://ryshu.github.io/jsonpath-picker/
+
+{
+    "glossary": {
+        "title": "example glossary",
+		"GlossDiv": {
+            "title": "S",
+			"GlossList": {
+                "GlossEntry": {
+                    "ID": "SGML",
+					"SortAs": "SGML",
+					"GlossTerm": "Standard Generalized Markup Language",
+					"Acronym": "SGML",
+					"Abbrev": "ISO 8879:1986",
+					"GlossDef": {
+                        "para": "A meta-markup language, used to create markup languages such as DocBook.",
+						"GlossSeeAlso": ["GML", "XML"]
+                    },
+					"GlossSee": "markup"
+                }
+            }
+        }
+    }
+}
+
+1) https://github.com/bennadel/JSON-Explorer
+2) https://github.com/alenaksu/json-viewer
+3) https://www.npmjs.com/package/json-to-table-com
+
+
+
+
