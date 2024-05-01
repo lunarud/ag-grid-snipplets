@@ -1,0 +1,13 @@
+1) https://github.com/rawatanimesh/angular-json-diff-jdd
+2) https://json-difference.web.app/
+3) https://www.npmjs.com/package/json-diff-kit
+https://github.com/RexSkz/json-diff-kit
+https://json-diff-kit.js.org/
+
+4) https://github.com/bogdanhatis/ang_jsoneditor_v16
+
+https://github.com/bogdanhatis/ang_jsoneditor_v16
+
+https://www.npmjs.com/package/bh-ang-jsoneditor-angular-v16
+https://github.com/mariohmol/ang-jsoneditor
+https://github.com/josdejong/jsoneditor
