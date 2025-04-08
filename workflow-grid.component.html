@@ -1,0 +1,11 @@
+<!-- workflow-grid.component.html -->
+<div style="height: 600px; width: 100%;">
+  <ag-grid-angular
+    style="width: 100%; height: 100%;"
+    class="ag-theme-alpine"
+    [gridOptions]="gridOptions"
+    [columnDefs]="columnDefs"
+    [rowData]="rowData"
+    (gridReady)="onGridReady($event)">
+  </ag-grid-angular>
+</div>
