@@ -11,3 +11,16 @@
 
 <button (click)="onGetSelectedFromDetail()">Get Selected Rows from Detail (Row 0)</button>
 <button (click)="onGetSelectedFromAllDetails()">Get Selected Rows from All Details</button>
+
+
+<!-- workflow-grid.component.html -->
+<div style="height: 600px; width: 100%;">
+  <ag-grid-angular
+    style="width: 100%; height: 100%;"
+    class="ag-theme-alpine"
+    [gridOptions]="gridOptions"
+    [columnDefs]="columnDefs"
+    [rowData]="rowData"
+    (gridReady)="onGridReady($event)">
+  </ag-grid-angular>
+</div>
