@@ -1,0 +1,8 @@
+<div class="workflow-container">
+  <div #diagramContainer class="diagram-canvas"></div>
+  <div class="details-panel" *ngIf="taskDetails">
+    <h3>Task Details</h3>
+    <pre>{{ taskDetails }}</pre>
+    <button (click)="clearDetails()">Close</button>
+  </div>
+</div>
