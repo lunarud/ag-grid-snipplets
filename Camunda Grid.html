@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Camunda Grid</title>
+    <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <style>
+        #myGrid {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="myGrid" class="ag-theme-alpine"></div>
+
+    <script>
+        // Master grid column definitions
+        const columnDefs = [
+            { field: "name", headerName: "Process Name", sortable: true, filter: true },
+            { field: "key", headerName: "Process Key", sortable: true, filter: true },
+            { field: "version", headerName: "Version", sortable: true, filter: true }
+        ];
+
+        // Detail grid column definitions
+        const detailColumnDefs = [
+            { field: "name", headerName: "Task Name", sortable: true, filter: true },
+            { field: "assignee", headerName: "Assignee", sortable: true, filter: true },
+            { field: "created", headerName: "Created", sortable: true, filter: true }
+        ];
+
+        // Grid options
+        const gridOptions = {
+            columnDefs: columnDefs,
+            rowData: [],
+            masterDetail: true,
+            detailCellRendererParams: {
+                detailGridOptions: {
+                    columnDefs: detailColumnDefs,
+                    rowData: []
+                },
+                getDetailRowData: function(params) {
+                    // Request tasks for the selected process definition
+                    window.webkit.messageHandlers.fetchTasks.postMessage(params.data.id);
+                    params.successCallback([]); // Initially empty, updated via callback
+                }
+            },
+            onGridReady: function(params) {
+                params.api.sizeColumnsToFit();
+            }
+        };
+
+        // Initialize grid
+        const gridDiv = document.querySelector('#myGrid');
+        new agGrid.Grid(gridDiv, gridOptions);
+
+        // Function to update master grid data
+        window.updateProcessDefinitions = function(data) {
+            gridOptions.api.setRowData(JSON.parse(data));
+        };
+
+        // Function to update detail grid data
+        window.updateTasks = function(processId, tasks) {
+            gridOptions.api.forEachNode(function(node) {
+                if (node.data.id === processId) {
+                    node.setDataValue('detail', JSON.parse(tasks));
+                    node.detailGridInfo.api.setRowData(JSON.parse(tasks));
+                }
+            });
+        };
+    </script>
+</body>
+</html>
