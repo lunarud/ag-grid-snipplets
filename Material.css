@@ -1,0 +1,78 @@
+// Step 1: Install Angular Material if you haven't already
+// Run these commands in your terminal:
+// ng add @angular/material
+
+// Step 2: Create a custom theme file (src/custom-theme.scss)
+@use '@angular/material' as mat;
+
+// Define your custom palettes
+$my-primary: mat.define-palette(mat.$indigo-palette, 500);
+$my-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400);
+$my-warn: mat.define-palette(mat.$red-palette);
+
+// Create the theme object
+$my-theme: mat.define-light-theme((
+  color: (
+    primary: $my-primary,
+    accent: $my-accent,
+    warn: $my-warn,
+  ),
+  typography: mat.define-typography-config(),
+  density: 0,
+));
+
+// Apply the theme to all components
+@include mat.all-component-themes($my-theme);
+
+// Step 3: Import the theme in your main styles.scss file
+// In your src/styles.scss file, add:
+// @import './custom-theme.scss';
+
+// Step 4: Configure your Angular module (app.module.ts)
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatTabsModule } from '@angular/material/tabs';
+
+import { AppComponent } from './app.component';
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    MatTabsModule
+  ],
+  providers: [],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+
+// Step 5: Update your component template (app.component.html)
+<!-- 
+<mat-tab-group color="primary" backgroundColor="accent">
+  <mat-tab label="First Tab"> Content 1 </mat-tab>
+  <mat-tab label="Second Tab"> Content 2 </mat-tab>
+  <mat-tab label="Third Tab"> Content 3 </mat-tab>
+</mat-tab-group>
+-->
+
+// Step 6: To customize specific tab colors beyond themes (app.component.scss)
+// You can add custom CSS to your component
+::ng-deep {
+  // Change the color of the active tab label
+  .mat-tab-label-active {
+    color: #3f51b5;
+    opacity: 1;
+  }
+
+  // Change the color of the ink bar (the line under the active tab)
+  .mat-ink-bar {
+    background-color: #ff4081 !important;
+  }
+  
+  // Background color of the tab group
+  .mat-tab-header {
+    background-color: #f5f5f5;
+  }
+}
