@@ -1,0 +1,1404 @@
+# Camunda Forms in ASP.NET Core Angular Project
+
+This guide demonstrates how to integrate Camunda Forms with an ASP.NET Core backend and Angular frontend application.
+
+## Project Structure
+
+```
+CamundaFormsSample/
+├── CamundaFormsSample.Server/     # ASP.NET Core Web API project
+│   ├── Controllers/               # API Controllers
+│   ├── Services/                  # Services for Camunda interaction
+│   ├── Models/                    # Data models
+│   ├── Program.cs                 # App configuration
+│   └── appsettings.json           # Configuration
+├── CamundaFormsSample.Client/     # Angular project
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── components/
+│   │   │   │   ├── task-list/     # Task listing component
+│   │   │   │   ├── task-form/     # Task form component
+│   │   │   │   └── process-start/ # Process start component
+│   │   │   ├── services/          # Angular services
+│   │   │   ├── models/            # TypeScript interfaces
+│   │   │   └── app.module.ts
+│   │   ├── assets/                # Static assets
+│   │   └── environments/          # Environment configurations
+│   └── angular.json
+└── README.md
+```
+
+## 1. Setting Up the Base Projects
+
+First, create an ASP.NET Core Angular project:
+
+```bash
+# Install .NET Core SDK and Angular CLI if you haven't already
+dotnet new angular -o CamundaFormsSample
+```
+
+## 2. Installing Required NuGet Packages for ASP.NET Core
+
+Add the Camunda API Client package to your server project:
+
+```bash
+cd CamundaFormsSample.Server
+dotnet add package Camunda.Api.Client
+```
+
+## 3. Implementing the Backend (C#)
+
+### 3.1 Create Camunda Service
+
+Create a service to interact with the Camunda API:
+
+```csharp
+// CamundaFormsSample.Server/Services/CamundaService.cs
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Camunda.Api.Client;
+using Camunda.Api.Client.ProcessDefinition;
+using Camunda.Api.Client.Task;
+using Microsoft.Extensions.Configuration;
+
+namespace CamundaFormsSample.Server.Services
+{
+    public class CamundaService
+    {
+        private readonly CamundaClient _camundaClient;
+
+        public CamundaService(IConfiguration configuration)
+        {
+            // Initialize Camunda client with REST API endpoint
+            var camundaUrl = configuration["Camunda:ApiUrl"];
+            _camundaClient = CamundaClient.Create(camundaUrl);
+        }
+
+        // Get all tasks
+        public async Task<List<TaskInfo>> GetTasksAsync()
+        {
+            var taskQuery = new TaskQuery
+            {
+                Active = true
+            };
+
+            return await _camundaClient.Tasks.Query(taskQuery).List();
+        }
+
+        // Get a specific task by ID
+        public async Task<TaskInfo> GetTaskAsync(string taskId)
+        {
+            return await _camundaClient.Tasks[taskId].Get();
+        }
+
+        // Get task form for a specific task
+        public async Task<string> GetTaskFormAsync(string taskId)
+        {
+            return await _camundaClient.Tasks[taskId].Form.Get();
+        }
+
+        // Get rendered task form HTML
+        public async Task<string> GetRenderedTaskFormAsync(string taskId)
+        {
+            return await _camundaClient.Tasks[taskId].Form.Rendered();
+        }
+
+        // Complete a task with variables
+        public async Task CompleteTaskAsync(string taskId, Dictionary<string, VariableValue> variables)
+        {
+            await _camundaClient.Tasks[taskId].Complete(new CompleteTaskDto
+            {
+                Variables = variables
+            });
+        }
+
+        // Start a process instance
+        public async Task<ProcessInstanceWithVariables> StartProcessInstanceAsync(
+            string processDefinitionKey, 
+            Dictionary<string, VariableValue> variables)
+        {
+            return await _camundaClient.ProcessDefinitions.ByKey(processDefinitionKey)
+                .StartProcessInstance(new StartProcessInstanceDto
+                {
+                    Variables = variables
+                });
+        }
+    }
+}
+```
+
+### 3.2 Create API Controllers
+
+```csharp
+// CamundaFormsSample.Server/Controllers/TasksController.cs
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Camunda.Api.Client;
+using CamundaFormsSample.Server.Services;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CamundaFormsSample.Server.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class TasksController : ControllerBase
+    {
+        private readonly CamundaService _camundaService;
+
+        public TasksController(CamundaService camundaService)
+        {
+            _camundaService = camundaService;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetTasks()
+        {
+            var tasks = await _camundaService.GetTasksAsync();
+            return Ok(tasks);
+        }
+
+        [HttpGet("{taskId}")]
+        public async Task<IActionResult> GetTask(string taskId)
+        {
+            var task = await _camundaService.GetTaskAsync(taskId);
+            return Ok(task);
+        }
+
+        [HttpGet("{taskId}/form")]
+        public async Task<IActionResult> GetTaskForm(string taskId)
+        {
+            var formKey = await _camundaService.GetTaskFormAsync(taskId);
+            return Ok(new { formKey });
+        }
+
+        [HttpGet("{taskId}/rendered-form")]
+        public async Task<IActionResult> GetRenderedTaskForm(string taskId)
+        {
+            var renderedForm = await _camundaService.GetRenderedTaskFormAsync(taskId);
+            return Content(renderedForm, "text/html");
+        }
+
+        [HttpPost("{taskId}/complete")]
+        public async Task<IActionResult> CompleteTask(string taskId, [FromBody] Dictionary<string, object> variables)
+        {
+            // Convert the simple object dictionary to Camunda variable dictionary
+            var camundaVariables = new Dictionary<string, VariableValue>();
+            foreach (var kvp in variables)
+            {
+                camundaVariables.Add(kvp.Key, VariableValue.FromObject(kvp.Value));
+            }
+
+            await _camundaService.CompleteTaskAsync(taskId, camundaVariables);
+            return Ok();
+        }
+    }
+
+    // CamundaFormsSample.Server/Controllers/ProcessesController.cs
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ProcessesController : ControllerBase
+    {
+        private readonly CamundaService _camundaService;
+
+        public ProcessesController(CamundaService camundaService)
+        {
+            _camundaService = camundaService;
+        }
+
+        [HttpPost("{processDefinitionKey}/start")]
+        public async Task<IActionResult> StartProcess(
+            string processDefinitionKey, 
+            [FromBody] Dictionary<string, object> variables)
+        {
+            // Convert the simple object dictionary to Camunda variable dictionary
+            var camundaVariables = new Dictionary<string, VariableValue>();
+            foreach (var kvp in variables)
+            {
+                camundaVariables.Add(kvp.Key, VariableValue.FromObject(kvp.Value));
+            }
+
+            var processInstance = await _camundaService.StartProcessInstanceAsync(
+                processDefinitionKey, 
+                camundaVariables);
+                
+            return Ok(processInstance);
+        }
+    }
+}
+```
+
+### 3.3 Configure Services
+
+Register the Camunda service in your Program.cs:
+
+```csharp
+// CamundaFormsSample.Server/Program.cs
+using CamundaFormsSample.Server.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Register Camunda service
+builder.Services.AddSingleton<CamundaService>();
+
+// Add CORS policy to allow Angular app to communicate with API
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularDevServer",
+        builder => builder
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.UseCors("AllowAngularDevServer");
+app.MapControllers();
+
+app.Run();
+```
+
+### 3.4 Add Camunda Configuration
+
+Add Camunda settings to appsettings.json:
+
+```json
+// CamundaFormsSample.Server/appsettings.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "Camunda": {
+    "ApiUrl": "http://localhost:8080/engine-rest"
+  }
+}
+```
+
+## 4. Implementing the Frontend (Angular/TypeScript)
+
+### 4.1 Install Required NPM Packages
+
+```bash
+cd CamundaFormsSample.Client
+npm install @angular/forms @angular/common/http
+```
+
+### 4.2 Create TypeScript Models
+
+```typescript
+// CamundaFormsSample.Client/src/app/models/task.model.ts
+export interface Task {
+  id: string;
+  name: string;
+  assignee: string;
+  created: string;
+  due: string;
+  formKey: string;
+  processInstanceId: string;
+  processDefinitionId: string;
+}
+
+// CamundaFormsSample.Client/src/app/models/process-instance.model.ts
+export interface ProcessInstance {
+  id: string;
+  definitionId: string;
+  businessKey: string;
+  ended: boolean;
+  suspended: boolean;
+}
+```
+
+### 4.3 Create Angular Services
+
+```typescript
+// CamundaFormsSample.Client/src/app/services/task.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { Task } from '../models/task.model';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class TaskService {
+  private apiUrl = 'https://localhost:7224/api/tasks';  // Update with your actual API port
+
+  constructor(private http: HttpClient) { }
+
+  getTasks(): Observable<Task[]> {
+    return this.http.get<Task[]>(this.apiUrl);
+  }
+
+  getTask(taskId: string): Observable<Task> {
+    return this.http.get<Task>(`${this.apiUrl}/${taskId}`);
+  }
+
+  getTaskForm(taskId: string): Observable<{ formKey: string }> {
+    return this.http.get<{ formKey: string }>(`${this.apiUrl}/${taskId}/form`);
+  }
+
+  getRenderedTaskForm(taskId: string): Observable<string> {
+    return this.http.get(`${this.apiUrl}/${taskId}/rendered-form`, { responseType: 'text' });
+  }
+
+  completeTask(taskId: string, variables: Record<string, any>): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${taskId}/complete`, variables);
+  }
+}
+
+// CamundaFormsSample.Client/src/app/services/process.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { ProcessInstance } from '../models/process-instance.model';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ProcessService {
+  private apiUrl = 'https://localhost:7224/api/processes';  // Update with your actual API port
+
+  constructor(private http: HttpClient) { }
+
+  startProcess(processDefinitionKey: string, variables: Record<string, any>): Observable<ProcessInstance> {
+    return this.http.post<ProcessInstance>(`${this.apiUrl}/${processDefinitionKey}/start`, variables);
+  }
+}
+```
+
+### 4.4 Implement Angular Components
+
+#### Task List Component
+
+```typescript
+// CamundaFormsSample.Client/src/app/components/task-list/task-list.component.ts
+import { Component, OnInit } from '@angular/core';
+import { TaskService } from '../../services/task.service';
+import { Task } from '../../models/task.model';
+
+@Component({
+  selector: 'app-task-list',
+  templateUrl: './task-list.component.html',
+  styleUrls: ['./task-list.component.css']
+})
+export class TaskListComponent implements OnInit {
+  tasks: Task[] = [];
+  loading = false;
+  error: string | null = null;
+
+  constructor(private taskService: TaskService) { }
+
+  ngOnInit(): void {
+    this.loadTasks();
+  }
+
+  loadTasks(): void {
+    this.loading = true;
+    this.taskService.getTasks()
+      .subscribe({
+        next: (tasks) => {
+          this.tasks = tasks;
+          this.loading = false;
+        },
+        error: (err) => {
+          this.error = 'Failed to load tasks: ' + err.message;
+          this.loading = false;
+        }
+      });
+  }
+}
+```
+
+```html
+<!-- CamundaFormsSample.Client/src/app/components/task-list/task-list.component.html -->
+<h2>My Tasks</h2>
+
+<div *ngIf="loading">Loading tasks...</div>
+<div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+<div *ngIf="!loading && !error">
+  <div *ngIf="tasks.length === 0">No tasks available.</div>
+  
+  <table *ngIf="tasks.length > 0" class="table">
+    <thead>
+      <tr>
+        <th>Task Name</th>
+        <th>Created</th>
+        <th>Due Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let task of tasks">
+        <td>{{ task.name }}</td>
+        <td>{{ task.created | date }}</td>
+        <td>{{ task.due | date }}</td>
+        <td>
+          <a [routerLink]="['/tasks', task.id]" class="btn btn-primary btn-sm">Open</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+```
+
+#### Task Form Component
+
+```typescript
+// CamundaFormsSample.Client/src/app/components/task-form/task-form.component.ts
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { TaskService } from '../../services/task.service';
+import { Task } from '../../models/task.model';
+
+@Component({
+  selector: 'app-task-form',
+  templateUrl: './task-form.component.html',
+  styleUrls: ['./task-form.component.css']
+})
+export class TaskFormComponent implements OnInit {
+  taskId: string = '';
+  task: Task | null = null;
+  renderedForm: SafeHtml | null = null;
+  formVariables: Record<string, any> = {};
+  loading = false;
+  submitting = false;
+  error: string | null = null;
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private taskService: TaskService,
+    private sanitizer: DomSanitizer
+  ) { }
+
+  ngOnInit(): void {
+    this.taskId = this.route.snapshot.paramMap.get('id') || '';
+    if (this.taskId) {
+      this.loadTask();
+      this.loadTaskForm();
+    }
+  }
+
+  loadTask(): void {
+    this.loading = true;
+    this.taskService.getTask(this.taskId)
+      .subscribe({
+        next: (task) => {
+          this.task = task;
+          this.loading = false;
+        },
+        error: (err) => {
+          this.error = 'Failed to load task: ' + err.message;
+          this.loading = false;
+        }
+      });
+  }
+
+  loadTaskForm(): void {
+    this.loading = true;
+    this.taskService.getRenderedTaskForm(this.taskId)
+      .subscribe({
+        next: (htmlForm) => {
+          // Sanitize HTML form to prevent XSS
+          this.renderedForm = this.sanitizer.bypassSecurityTrustHtml(htmlForm);
+          this.loading = false;
+          
+          // After form is rendered, attach event listeners to form elements
+          setTimeout(() => {
+            this.setupFormEventListeners();
+          }, 100);
+        },
+        error: (err) => {
+          this.error = 'Failed to load form: ' + err.message;
+          this.loading = false;
+        }
+      });
+  }
+
+  setupFormEventListeners(): void {
+    // Find all form elements with cam-variable attributes
+    const formElements = document.querySelectorAll('[cam-variable-name]');
+    formElements.forEach((element: Element) => {
+      const inputElement = element as HTMLInputElement;
+      const variableName = inputElement.getAttribute('cam-variable-name') || '';
+      const variableType = inputElement.getAttribute('cam-variable-type') || 'String';
+      
+      // Set initial value in our variables object
+      this.setVariableValue(inputElement, variableName, variableType);
+      
+      // Add event listeners to update variables when changed
+      inputElement.addEventListener('change', () => {
+        this.setVariableValue(inputElement, variableName, variableType);
+      });
+    });
+  }
+
+  setVariableValue(element: HTMLInputElement, name: string, type: string): void {
+    let value: any;
+    
+    if (element.type === 'checkbox') {
+      value = element.checked;
+    } else if (element.type === 'number') {
+      value = parseInt(element.value, 10);
+    } else {
+      value = element.value;
+    }
+    
+    // Convert to appropriate type
+    switch (type) {
+      case 'Boolean':
+        value = Boolean(value);
+        break;
+      case 'Integer':
+      case 'Long':
+        value = parseInt(value, 10);
+        break;
+      case 'Double':
+      case 'Float':
+        value = parseFloat(value);
+        break;
+      // Default is String, which requires no conversion
+    }
+    
+    this.formVariables[name] = value;
+  }
+
+  submitForm(): void {
+    this.submitting = true;
+    this.taskService.completeTask(this.taskId, this.formVariables)
+      .subscribe({
+        next: () => {
+          this.submitting = false;
+          // Navigate back to task list on success
+          this.router.navigate(['/tasks']);
+        },
+        error: (err) => {
+          this.error = 'Failed to complete task: ' + err.message;
+          this.submitting = false;
+        }
+      });
+  }
+}
+```
+
+```html
+<!-- CamundaFormsSample.Client/src/app/components/task-form/task-form.component.html -->
+<div class="card">
+  <div class="card-header" *ngIf="task">
+    <h2>{{ task.name }}</h2>
+  </div>
+  <div class="card-body">
+    <div *ngIf="loading">Loading form...</div>
+    <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+    <div *ngIf="!loading && !error">
+      <!-- Render the Camunda form -->
+      <div *ngIf="renderedForm" [innerHTML]="renderedForm"></div>
+      
+      <div class="form-group mt-3">
+        <button (click)="submitForm()" [disabled]="submitting" class="btn btn-primary">
+          <span *ngIf="submitting" class="spinner-border spinner-border-sm mr-1"></span>
+          Complete Task
+        </button>
+        <a routerLink="/tasks" class="btn btn-secondary ml-2">Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+#### Process Start Component
+
+```typescript
+// CamundaFormsSample.Client/src/app/components/process-start/process-start.component.ts
+import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ProcessService } from '../../services/process.service';
+
+@Component({
+  selector: 'app-process-start',
+  templateUrl: './process-start.component.html',
+  styleUrls: ['./process-start.component.css']
+})
+export class ProcessStartComponent {
+  startForm: FormGroup;
+  submitting = false;
+  error: string | null = null;
+  
+  // This would typically come from a service that fetches available process definitions
+  processDefinitions = [
+    { key: 'invoice', name: 'Invoice Process' },
+    { key: 'onboarding', name: 'Employee Onboarding' }
+  ];
+
+  constructor(
+    private fb: FormBuilder,
+    private router: Router,
+    private processService: ProcessService
+  ) {
+    this.startForm = this.fb.group({
+      processDefinitionKey: ['', Validators.required],
+      variables: this.fb.group({
+        // Add form controls for your process variables here
+        // For example:
+        amount: ['', Validators.required],
+        requester: ['', Validators.required]
+      })
+    });
+  }
+
+  startProcess(): void {
+    if (this.startForm.invalid) {
+      return;
+    }
+    
+    this.submitting = true;
+    const processKey = this.startForm.value.processDefinitionKey;
+    const variables = this.startForm.value.variables;
+    
+    this.processService.startProcess(processKey, variables)
+      .subscribe({
+        next: () => {
+          this.submitting = false;
+          this.router.navigate(['/tasks']);
+        },
+        error: (err) => {
+          this.error = 'Failed to start process: ' + err.message;
+          this.submitting = false;
+        }
+      });
+  }
+}
+```
+
+```html
+<!-- CamundaFormsSample.Client/src/app/components/process-start/process-start.component.html -->
+<div class="card">
+  <div class="card-header">
+    <h2>Start New Process</h2>
+  </div>
+  <div class="card-body">
+    <form [formGroup]="startForm" (ngSubmit)="startProcess()">
+      <div class="form-group">
+        <label for="processDefinitionKey">Process Type</label>
+        <select id="processDefinitionKey" formControlName="processDefinitionKey" class="form-control">
+          <option value="">-- Select Process --</option>
+          <option *ngFor="let process of processDefinitions" [value]="process.key">
+            {{ process.name }}
+          </option>
+        </select>
+        <div *ngIf="startForm.get('processDefinitionKey')?.invalid && startForm.get('processDefinitionKey')?.touched" class="text-danger">
+          Process type is required
+        </div>
+      </div>
+
+      <div formGroupName="variables">
+        <!-- Example form fields for process variables -->
+        <div class="form-group">
+          <label for="amount">Amount</label>
+          <input type="number" id="amount" formControlName="amount" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label for="requester">Requester</label>
+          <input type="text" id="requester" formControlName="requester" class="form-control">
+        </div>
+      </div>
+
+      <div class="form-group mt-3">
+        <button type="submit" [disabled]="startForm.invalid || submitting" class="btn btn-primary">
+          <span *ngIf="submitting" class="spinner-border spinner-border-sm mr-1"></span>
+          Start Process
+        </button>
+      </div>
+    </form>
+
+    <div *ngIf="error" class="alert alert-danger mt-3">{{ error }}</div>
+  </div>
+</div>
+```
+
+### 4.5 Update App Module
+
+```typescript
+// CamundaFormsSample.Client/src/app/app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule } from '@angular/common/http';
+import { ReactiveFormsModule } from '@angular/forms';
+import { RouterModule, Routes } from '@angular/router';
+
+import { AppComponent } from './app.component';
+import { TaskListComponent } from './components/task-list/task-list.component';
+import { TaskFormComponent } from './components/task-form/task-form.component';
+import { ProcessStartComponent } from './components/process-start/process-start.component';
+
+const routes: Routes = [
+  { path: '', redirectTo: 'tasks', pathMatch: 'full' },
+  { path: 'tasks', component: TaskListComponent },
+  { path: 'tasks/:id', component: TaskFormComponent },
+  { path: 'start-process', component: ProcessStartComponent },
+  { path: '**', redirectTo: 'tasks' }
+];
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    TaskListComponent,
+    TaskFormComponent,
+    ProcessStartComponent
+  ],
+  imports: [
+    BrowserModule,
+    HttpClientModule,
+    ReactiveFormsModule,
+    RouterModule.forRoot(routes)
+  ],
+  providers: [],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+```
+
+### 4.6 Update App Component
+
+```html
+<!-- CamundaFormsSample.Client/src/app/app.component.html -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand" href="#">Camunda Forms Demo</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/tasks" routerLinkActive="active">Tasks</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/start-process" routerLinkActive="active">Start Process</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4">
+  <router-outlet></router-outlet>
+</div>
+```
+
+## 5. BPMN Process with Forms Example
+
+Here's an example of a simple expense approval process with forms:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_0fr9mxs" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="expense-approval" name="Expense Approval" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Expense Request Received">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="amount" label="Amount" type="string" />
+          <camunda:formField id="purpose" label="Purpose" type="string" />
+          <camunda:formField id="requesterName" label="Requester Name" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>SequenceFlow_1fp17al</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_1fp17al" sourceRef="StartEvent_1" targetRef="approve-expense" />
+    <bpmn:userTask id="approve-expense" name="Approve Expense" camunda:formKey="embedded:app:forms/approve-expense.html">
+      <bpmn:incoming>SequenceFlow_1fp17al</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0wnb4ke</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="ExclusiveGateway_15hu1pt" name="Approved?">
+      <bpmn:incoming>SequenceFlow_0wnb4ke</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0vbi21y</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_0m6rivf</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="SequenceFlow_0wnb4ke" sourceRef="approve-expense" targetRef="ExclusiveGateway_15hu1pt" />
+    <bpmn:sequenceFlow id="SequenceFlow_0vbi21y" name="Yes" sourceRef="ExclusiveGateway_15hu1pt" targetRef="Task_Process_Payment">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_0m6rivf" name="No" sourceRef="ExclusiveGateway_15hu1pt" targetRef="Task_Reject_Payment">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_Process_Payment" name="Process Payment" camunda:type="external" camunda:topic="process-payment">
+      <bpmn:incoming>SequenceFlow_0vbi21y</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0m33ban</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Reject_Payment" name="Reject Payment" camunda:type="external" camunda:topic="reject-payment">
+      <bpmn:incoming>SequenceFlow_0m6rivf</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1gd6p37</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_0x6ir2l" name="Payment Processed">
+      <bpmn:incoming>SequenceFlow_0m33ban</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_04pspre" name="Payment Rejected">
+      <bpmn:incoming>SequenceFlow_1gd6p37</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_0m33ban" sourceRef="Task_Process_Payment" targetRef="EndEvent_0x6ir2l" />
+    <bpmn:sequenceFlow id="SequenceFlow_1gd6p37" sourceRef="Task_Reject_Payment" targetRef="EndEvent_04pspre" />
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+## 6. HTML Form Templates
+
+### 6.1 Approval Form Example
+
+Create an embedded form for the approval task:
+
+```html
+<!-- embedded:app:forms/approve-expense.html -->
+<form name="approvalForm">
+  <div class="form-group">
+    <label for="amount">Amount</label>
+    <input class="form-control" 
+           type="text" 
+           cam-variable-name="amount" 
+           cam-variable-type="String" 
+           readonly />
+  </div>
+  
+  <div class="form-group">
+    <label for="purpose">Purpose</label>
+    <input class="form-control" 
+           cam-variable-name="purpose" 
+           cam-variable-type="String" 
+           readonly />
+  </div>
+  
+  <div class="form-group">
+    <label for="requesterName">Requester</label>
+    <input class="form-control" 
+           cam-variable-name="requesterName" 
+           cam-variable-type="String" 
+           readonly />
+  </div>
+  
+  <div class="form-group">
+    <label for="comments">Comments</label>
+    <textarea class="form-control" 
+              cam-variable-name="comments" 
+              cam-variable-type="String"></textarea>
+  </div>
+  
+  <div class="form-group">
+    <label>
+      <input type="checkbox" 
+             cam-variable-name="approved" 
+             cam-variable-type="Boolean" />
+      Approve this expense
+    </label>
+  </div>
+</form>
+```
+
+## 7. Implementing External Task Workers
+
+For the service tasks in our BPMN process, we need to implement external task workers:
+
+```csharp
+// CamundaFormsSample.Server/Services/ExternalTaskWorkers.cs
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Camunda.Api.Client;
+using Camunda.Api.Client.ExternalTask;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace CamundaFormsSample.Server.Services
+{
+    public class PaymentProcessingWorker : BackgroundService
+    {
+        private readonly ILogger<PaymentProcessingWorker> _logger;
+        private readonly CamundaClient _camundaClient;
+        private readonly string _workerId;
+        private readonly int _maxTasks;
+        private readonly int _lockDurationMs;
+        private readonly List<string> _topics;
+
+        public PaymentProcessingWorker(
+            ILogger<PaymentProcessingWorker> logger,
+            IConfiguration configuration)
+        {
+            _logger = logger;
+            
+            var camundaUrl = configuration["Camunda:ApiUrl"];
+            _camundaClient = CamundaClient.Create(camundaUrl);
+            
+            // Configuration for the external task worker
+            _workerId = "payment-worker-" + Guid.NewGuid().ToString();
+            _maxTasks = 10;
+            _lockDurationMs = 10000; // 10 seconds
+            _topics = new List<string> { "process-payment", "reject-payment" };
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _logger.LogInformation($"Payment Processing Worker '{_workerId}' starting.");
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    // Fetch and lock external tasks
+                    var taskTopics = new List<FetchExternalTaskTopic>();
+                    foreach (var topic in _topics)
+                    {
+                        taskTopics.Add(new FetchExternalTaskTopic(topic, _lockDurationMs));
+                    }
+
+                    var tasks = await _camundaClient.ExternalTasks.FetchAndLock(
+                        new FetchExternalTasksDto
+                        {
+                            WorkerId = _workerId,
+                            MaxTasks = _maxTasks,
+                            Topics = taskTopics
+                        });
+
+                    foreach (var task in tasks)
+                    {
+                        try
+                        {
+                            // Process the external task based on its topic
+                            switch (task.TopicName)
+                            {
+                                case "process-payment":
+                                    await ProcessPayment(task);
+                                    break;
+                                    
+                                case "reject-payment":
+                                    await RejectPayment(task);
+                                    break;
+                                    
+                                default:
+                                    _logger.LogWarning($"Unknown topic: {task.TopicName}");
+                                    break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Error processing task: {task.Id}");
+                            
+                            // Report failure to Camunda
+                            await _camundaClient.ExternalTasks[task.Id].Failure(
+                                new ReportFailureDto
+                                {
+                                    WorkerId = _workerId,
+                                    ErrorMessage = ex.Message,
+                                    ErrorDetails = ex.StackTrace
+                                });
+                        }
+                    }
+
+                    // Wait a bit before polling again if no tasks were found
+                    if (tasks.Count == 0)
+                    {
+                        await Task.Delay(1000, stoppingToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in payment processing worker");
+                    await Task.Delay(5000, stoppingToken); // Wait a bit longer on error
+                }
+            }
+        }
+
+        private async Task ProcessPayment(ExternalTask task)
+        {
+            _logger.LogInformation($"Processing payment for task: {task.Id}");
+            
+            // Extract variables from the task
+            decimal amount = 0;
+            if (task.Variables.TryGetValue("amount", out var amountVar))
+            {
+                decimal.TryParse(amountVar.Value.ToString(), out amount);
+            }
+            
+            string requesterName = task.Variables.TryGetValue("requesterName", out var requesterVar) 
+                ? requesterVar.Value.ToString() 
+                : "Unknown";
+            
+            // Simulate payment processing
+            _logger.LogInformation($"Processing payment of ${amount} for {requesterName}");
+            await Task.Delay(1000); // Simulate work
+            
+            // Complete the task
+            await _camundaClient.ExternalTasks[task.Id].Complete(
+                new CompleteExternalTaskDto
+                {
+                    WorkerId = _workerId,
+                    Variables = new Dictionary<string, VariableValue>
+                    {
+                        ["paymentProcessedTime"] = VariableValue.FromObject(DateTime.Now)
+                    }
+                });
+            
+            _logger.LogInformation($"Completed payment processing for task: {task.Id}");
+        }
+
+        private async Task RejectPayment(ExternalTask task)
+        {
+            _logger.LogInformation($"Rejecting payment for task: {task.Id}");
+            
+            // Extract variables
+            string requesterName = task.Variables.TryGetValue("requesterName", out var requesterVar) 
+                ? requesterVar.Value.ToString() 
+                : "Unknown";
+            
+            string comments = task.Variables.TryGetValue("comments", out var commentsVar) 
+                ? commentsVar.Value.ToString() 
+                : "";
+            
+            // Simulate rejection notification
+            _logger.LogInformation($"Sending rejection notification to {requesterName}. Reason: {comments}");
+            await Task.Delay(500); // Simulate work
+            
+            // Complete the task
+            await _camundaClient.ExternalTasks[task.Id].Complete(
+                new CompleteExternalTaskDto
+                {
+                    WorkerId = _workerId,
+                    Variables = new Dictionary<string, VariableValue>
+                    {
+                        ["rejectionTime"] = VariableValue.FromObject(DateTime.Now)
+                    }
+                });
+            
+            _logger.LogInformation($"Completed payment rejection for task: {task.Id}");
+        }
+    }
+}
+```
+
+Register the external task worker in Program.cs:
+
+```csharp
+// Add to Program.cs in ConfigureServices
+builder.Services.AddHostedService<PaymentProcessingWorker>();
+```
+
+## 8. Testing the Integration
+
+1. Deploy your BPMN process to Camunda (typically via Camunda Modeler or REST API)
+2. Start your ASP.NET Core backend (`dotnet run`)
+3. Start your Angular frontend (`ng serve`)
+4. Use the Angular UI to:
+   - Start a new expense process
+   - View and complete tasks
+   - Check process status
+
+## 9. Advanced Form Handling
+
+### 9.1 Custom Form Validation in Angular
+
+You can extend the form handling in Angular to include custom validation:
+
+```typescript
+// CamundaFormsSample.Client/src/app/components/task-form/task-form.component.ts
+// Add this method to TaskFormComponent
+
+validateForm(): boolean {
+  let isValid = true;
+  const formElements = document.querySelectorAll('[cam-variable-name]');
+  
+  formElements.forEach((element: Element) => {
+    const inputElement = element as HTMLInputElement;
+    const variableName = inputElement.getAttribute('cam-variable-name') || '';
+    const required = inputElement.hasAttribute('required');
+    
+    // Check for required fields
+    if (required && !inputElement.value) {
+      inputElement.classList.add('is-invalid');
+      isValid = false;
+    } else {
+      inputElement.classList.remove('is-invalid');
+    }
+    
+    // Add custom validation logic based on variable types
+    const variableType = inputElement.getAttribute('cam-variable-type') || 'String';
+    
+    if (variableType === 'Integer' || variableType === 'Long') {
+      if (inputElement.value && !/^\d+$/.test(inputElement.value)) {
+        inputElement.classList.add('is-invalid');
+        isValid = false;
+      }
+    } else if (variableType === 'Double' || variableType === 'Float') {
+      if (inputElement.value && !/^\d+(\.\d+)?$/.test(inputElement.value)) {
+        inputElement.classList.add('is-invalid');
+        isValid = false;
+      }
+    }
+  });
+  
+  return isValid;
+}
+
+// Update submitForm method to use validation
+submitForm(): void {
+  if (!this.validateForm()) {
+    this.error = 'Please correct the form errors before submitting.';
+    return;
+  }
+  
+  this.submitting = true;
+  this.taskService.completeTask(this.taskId, this.formVariables)
+    .subscribe({
+      next: () => {
+        this.submitting = false;
+        this.router.navigate(['/tasks']);
+      },
+      error: (err) => {
+        this.error = 'Failed to complete task: ' + err.message;
+        this.submitting = false;
+      }
+    });
+}
+```
+
+### 9.2 Using Camunda Form.js Library
+
+For a more advanced integration, you can use the Camunda Form.js library (introduced in Camunda 7.15):
+
+```typescript
+// CamundaFormsSample.Client/src/app/components/task-form/form-js.component.ts
+import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TaskService } from '../../services/task.service';
+import { Task } from '../../models/task.model';
+
+// Form.js is loaded via CDN in index.html
+declare const FormJS: any;
+
+@Component({
+  selector: 'app-form-js',
+  template: `
+    <div class="card">
+      <div class="card-header" *ngIf="task">
+        <h2>{{ task.name }}</h2>
+      </div>
+      <div class="card-body">
+        <div *ngIf="loading">Loading form...</div>
+        <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+        
+        <div #formContainer></div>
+        
+        <div class="form-group mt-3">
+          <button (click)="submitForm()" [disabled]="submitting" class="btn btn-primary">
+            <span *ngIf="submitting" class="spinner-border spinner-border-sm mr-1"></span>
+            Complete Task
+          </button>
+          <a routerLink="/tasks" class="btn btn-secondary ml-2">Cancel</a>
+        </div>
+      </div>
+    </div>
+  `
+})
+export class FormJsComponent implements OnInit {
+  @ViewChild('formContainer', { static: true }) formContainer: ElementRef;
+  
+  taskId: string = '';
+  task: Task | null = null;
+  form: any = null;
+  formData: any = {};
+  loading = false;
+  submitting = false;
+  error: string | null = null;
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private taskService: TaskService
+  ) { }
+
+  ngOnInit(): void {
+    this.taskId = this.route.snapshot.paramMap.get('id') || '';
+    if (this.taskId) {
+      this.loadTask();
+      this.loadFormSchema();
+    }
+  }
+
+  loadTask(): void {
+    this.loading = true;
+    this.taskService.getTask(this.taskId)
+      .subscribe({
+        next: (task) => {
+          this.task = task;
+          this.loading = false;
+        },
+        error: (err) => {
+          this.error = 'Failed to load task: ' + err.message;
+          this.loading = false;
+        }
+      });
+  }
+
+  loadFormSchema(): void {
+    this.loading = true;
+    
+    // Fetch form schema from Camunda
+    this.taskService.getFormSchema(this.taskId)
+      .subscribe({
+        next: (formSchema) => {
+          // Initialize Form.js with the schema
+          this.form = new FormJS.Form({
+            container: this.formContainer.nativeElement,
+            schema: formSchema
+          });
+          
+          // Load form variables from Camunda
+          this.taskService.getVariables(this.taskId)
+            .subscribe({
+              next: (variables) => {
+                this.form.setData(variables);
+                this.loading = false;
+              },
+              error: (err) => {
+                this.error = 'Failed to load form variables: ' + err.message;
+                this.loading = false;
+              }
+            });
+        },
+        error: (err) => {
+          this.error = 'Failed to load form schema: ' + err.message;
+          this.loading = false;
+        }
+      });
+  }
+
+  submitForm(): void {
+    if (!this.form) {
+      this.error = 'Form not initialized';
+      return;
+    }
+    
+    // Validate form
+    const validation = this.form.validate();
+    if (!validation.valid) {
+      this.error = 'Please correct the form errors before submitting.';
+      return;
+    }
+    
+    this.submitting = true;
+    const formData = this.form.getData();
+    
+    this.taskService.completeTask(this.taskId, formData)
+      .subscribe({
+        next: () => {
+          this.submitting = false;
+          this.router.navigate(['/tasks']);
+        },
+        error: (err) => {
+          this.error = 'Failed to complete task: ' + err.message;
+          this.submitting = false;
+        }
+      });
+  }
+}
+```
+
+## 10. Security Considerations
+
+When implementing Camunda Forms in your ASP.NET Core Angular application, consider these security aspects:
+
+1. Implement proper authentication and authorization
+2. Sanitize HTML from Camunda to prevent XSS attacks
+3. Apply content security policy (CSP) headers
+4. Use HTTPS for all communications
+
+Example authentication middleware in ASP.NET Core:
+
+```csharp
+// CamundaFormsSample.Server/Program.cs
+// Add authentication
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+    });
+
+// Add authorization
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAdminRole", policy => 
+        policy.RequireRole("Admin"));
+    options.AddPolicy("RequireUserRole", policy => 
+        policy.RequireRole("User"));
+});
+
+// Add these before app.Run()
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+## 11. Deployment
+
+Steps to deploy your Camunda Forms ASP.NET Core Angular application:
+
+1. Build Angular application for production:
+   ```bash
+   cd CamundaFormsSample.Client
+   ng build --prod
+   ```
+
+2. Publish ASP.NET Core application:
+   ```bash
+   cd CamundaFormsSample.Server
+   dotnet publish -c Release
+   ```
+
+3. Deploy to your hosting environment (e.g., Azure, IIS, etc.)
+
+4. Ensure Camunda Engine is accessible and properly secured
+
+## 12. Troubleshooting Common Issues
+
+1. **CORS Issues**: Ensure CORS is properly configured to allow communication between Angular and your ASP.NET Core API.
+
+2. **Form Not Rendering**: Check HTML sanitization settings and make sure necessary scripts are loaded.
+
+3. **Variable Type Conversion**: Pay attention to data types when passing variables between Angular and Camunda.
+
+4. **Task Completion Failures**: Verify all required variables are included when completing a task.
+
+5. **Authentication Problems**: Check JWT token configuration and claims.
