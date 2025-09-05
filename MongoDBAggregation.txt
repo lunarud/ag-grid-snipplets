@@ -1,0 +1,341 @@
+// MongoDB Aggregation Pipeline Examples for Dynamic Nested Object Access
+
+// Sample Document Structure
+/*
+{
+  _id: ObjectId("..."),
+  user: {
+    profile: {
+      personal: {
+        name: "John Doe",
+        age: 30
+      },
+      preferences: {
+        theme: "dark",
+        language: "en"
+      }
+    },
+    settings: {
+      notifications: true,
+      privacy: "public"
+    }
+  },
+  metadata: {
+    created: ISODate("2024-01-01"),
+    tags: ["important", "user"],
+    categories: {
+      primary: "business",
+      secondary: "personal"
+    }
+  },
+  dynamicFields: {
+    "field_2024": "value1",
+    "field_2023": "value2",
+    "config_prod": "production_value",
+    "config_dev": "development_value"
+  }
+}
+*/
+
+// 1. Using $let to define variables for nested paths
+[
+  {
+    $addFields: {
+      extractedData: {
+        $let: {
+          vars: {
+            // Define variables for commonly used nested paths
+            userProfile: "$user.profile",
+            userSettings: "$user.settings",
+            metaCategories: "$metadata.categories"
+          },
+          in: {
+            userName: "$$userProfile.personal.name",
+            userAge: "$$userProfile.personal.age",
+            userTheme: "$$userProfile.preferences.theme",
+            notificationsEnabled: "$$userSettings.notifications",
+            primaryCategory: "$$metaCategories.primary",
+            secondaryCategory: "$$metaCategories.secondary"
+          }
+        }
+      }
+    }
+  }
+]
+
+// 2. Dynamic field access using variables and expressions
+[
+  {
+    $addFields: {
+      currentYear: { $year: new Date() },
+      environment: "prod" // This could come from a parameter
+    }
+  },
+  {
+    $addFields: {
+      dynamicFieldAccess: {
+        $let: {
+          vars: {
+            // Construct dynamic field names
+            yearField: { 
+              $concat: ["field_", { $toString: "$currentYear" }] 
+            },
+            envField: { 
+              $concat: ["config_", "$environment"] 
+            }
+          },
+          in: {
+            currentYearValue: {
+              $getField: {
+                field: "$$yearField",
+                input: "$dynamicFields"
+              }
+            },
+            environmentValue: {
+              $getField: {
+                field: "$$envField",
+                input: "$dynamicFields"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 3. Using $map with variables for array processing within nested objects
+[
+  {
+    $addFields: {
+      processedTags: {
+        $let: {
+          vars: {
+            tagArray: "$metadata.tags",
+            userLang: "$user.profile.preferences.language"
+          },
+          in: {
+            $map: {
+              input: "$$tagArray",
+              as: "tag",
+              in: {
+                originalTag: "$$tag",
+                upperCaseTag: { $toUpper: "$$tag" },
+                tagWithLang: { 
+                  $concat: ["$$tag", "_", "$$userLang"] 
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 4. Conditional access with variables and $ifNull
+[
+  {
+    $addFields: {
+      safeAccess: {
+        $let: {
+          vars: {
+            profile: "$user.profile",
+            settings: "$user.settings"
+          },
+          in: {
+            safeName: {
+              $ifNull: ["$$profile.personal.name", "Unknown User"]
+            },
+            safeAge: {
+              $ifNull: ["$$profile.personal.age", 0]
+            },
+            safeNotifications: {
+              $ifNull: ["$$settings.notifications", false]
+            },
+            // Access potentially missing nested fields
+            safeNestedField: {
+              $ifNull: ["$$profile.work.company", "No Company"]
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 5. Complex example: Dynamic path building with variables
+[
+  {
+    $addFields: {
+      // Simulate parameters that could come from application
+      targetSection: "profile",
+      targetSubsection: "personal",
+      targetField: "name"
+    }
+  },
+  {
+    $addFields: {
+      dynamicExtraction: {
+        $let: {
+          vars: {
+            // Build the full path dynamically
+            basePath: "$user",
+            section: "$targetSection",
+            subsection: "$targetSubsection",
+            field: "$targetField"
+          },
+          in: {
+            // Use $getField to access nested objects dynamically
+            result: {
+              $getField: {
+                field: "$$field",
+                input: {
+                  $getField: {
+                    field: "$$subsection",
+                    input: {
+                      $getField: {
+                        field: "$$section",
+                        input: "$$basePath"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 6. Using variables in $project stage for cleaner output
+[
+  {
+    $project: {
+      _id: 1,
+      userInfo: {
+        $let: {
+          vars: {
+            profile: "$user.profile.personal",
+            prefs: "$user.profile.preferences",
+            meta: "$metadata"
+          },
+          in: {
+            name: "$$profile.name",
+            age: "$$profile.age",
+            theme: "$$prefs.theme",
+            language: "$$prefs.language",
+            created: "$$meta.created",
+            primaryCategory: "$$meta.categories.primary"
+          }
+        }
+      }
+    }
+  }
+]
+
+// 7. Advanced: Using variables with $switch for conditional field selection
+[
+  {
+    $addFields: {
+      userType: "premium", // This could be determined by business logic
+      accessLevel: "admin"
+    }
+  },
+  {
+    $addFields: {
+      conditionalData: {
+        $let: {
+          vars: {
+            type: "$userType",
+            level: "$accessLevel",
+            userData: "$user"
+          },
+          in: {
+            $switch: {
+              branches: [
+                {
+                  case: { 
+                    $and: [
+                      { $eq: ["$$type", "premium"] },
+                      { $eq: ["$$level", "admin"] }
+                    ]
+                  },
+                  then: {
+                    fullAccess: true,
+                    name: "$$userData.profile.personal.name",
+                    settings: "$$userData.settings",
+                    allPreferences: "$$userData.profile.preferences"
+                  }
+                },
+                {
+                  case: { $eq: ["$$type", "basic"] },
+                  then: {
+                    limitedAccess: true,
+                    name: "$$userData.profile.personal.name",
+                    basicSettings: {
+                      notifications: "$$userData.settings.notifications"
+                    }
+                  }
+                }
+              ],
+              default: {
+                guestAccess: true,
+                publicInfo: "$$userData.profile.personal.name"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 8. Practical example: Extracting configuration based on environment
+[
+  {
+    $addFields: {
+      // These could be parameters passed to the aggregation
+      environment: "prod",
+      feature: "notifications"
+    }
+  },
+  {
+    $addFields: {
+      environmentConfig: {
+        $let: {
+          vars: {
+            env: "$environment",
+            configKey: { $concat: ["config_", "$environment"] },
+            featureKey: "$feature"
+          },
+          in: {
+            environmentValue: {
+              $getField: {
+                field: "$$configKey",
+                input: "$dynamicFields"
+              }
+            },
+            featureEnabled: {
+              $getField: {
+                field: "$$featureKey",
+                input: "$user.settings"
+              }
+            },
+            combinedConfig: {
+              environment: "$$env",
+              configValue: {
+                $getField: {
+                  field: "$$configKey",
+                  input: "$dynamicFields"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
