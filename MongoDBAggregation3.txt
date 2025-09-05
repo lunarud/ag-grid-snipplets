@@ -1,0 +1,518 @@
+// Dynamic Path Creation for Complex Types in MongoDB Aggregation
+
+// Sample Complex Document Structure
+/*
+{
+  _id: ObjectId("..."),
+  application: {
+    modules: {
+      authentication: {
+        providers: {
+          oauth: {
+            google: { clientId: "google123", enabled: true },
+            facebook: { clientId: "fb456", enabled: false },
+            github: { clientId: "gh789", enabled: true }
+          },
+          saml: {
+            enterprise: { entityId: "ent001", enabled: true },
+            education: { entityId: "edu002", enabled: false }
+          }
+        },
+        settings: {
+          sessionTimeout: 3600,
+          maxAttempts: 5
+        }
+      },
+      notifications: {
+        channels: {
+          email: { smtp: { host: "smtp.example.com", port: 587 } },
+          sms: { provider: "twilio", apiKey: "tw123" },
+          push: { firebase: { projectId: "proj123" } }
+        }
+      }
+    },
+    environments: {
+      development: {
+        database: { host: "dev-db.com", port: 5432 },
+        api: { baseUrl: "https://api-dev.com", timeout: 5000 }
+      },
+      production: {
+        database: { host: "prod-db.com", port: 5432 },
+        api: { baseUrl: "https://api.com", timeout: 10000 }
+      }
+    }
+  },
+  user: {
+    profile: {
+      personal: { name: "John", age: 30 },
+      professional: { title: "Developer", company: "TechCorp" }
+    },
+    preferences: {
+      ui: { theme: "dark", language: "en" },
+      notifications: { email: true, push: false }
+    }
+  }
+}
+*/
+
+// 1. Basic Dynamic Path Building with String Concatenation
+[
+  {
+    $addFields: {
+      // These could be parameters from your application
+      targetModule: "authentication",
+      targetProvider: "oauth",
+      targetService: "google"
+    }
+  },
+  {
+    $addFields: {
+      dynamicConfig: {
+        $let: {
+          vars: {
+            // Build path components
+            basePath: "$application.modules",
+            modulePath: "$targetModule",
+            providerPath: "$targetProvider", 
+            servicePath: "$targetService"
+          },
+          in: {
+            // Step-by-step path navigation
+            moduleData: { 
+              $getField: { 
+                field: "$$modulePath", 
+                input: "$$basePath" 
+              } 
+            },
+            providerData: {
+              $getField: {
+                field: "$$providerPath",
+                input: {
+                  $getField: {
+                    field: "providers",
+                    input: { 
+                      $getField: { 
+                        field: "$$modulePath", 
+                        input: "$$basePath" 
+                      } 
+                    }
+                  }
+                }
+              }
+            },
+            serviceConfig: {
+              $getField: {
+                field: "$$servicePath",
+                input: {
+                  $getField: {
+                    field: "$$providerPath",
+                    input: {
+                      $getField: {
+                        field: "providers",
+                        input: { 
+                          $getField: { 
+                            field: "$$modulePath", 
+                            input: "$$basePath" 
+                          } 
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 2. Advanced: Dynamic Path Array Processing
+[
+  {
+    $addFields: {
+      // Define path as array for easier manipulation
+      pathSegments: ["application", "modules", "authentication", "providers", "oauth", "google"],
+      targetField: "enabled"
+    }
+  },
+  {
+    $addFields: {
+      dynamicPathResult: {
+        $let: {
+          vars: {
+            pathArray: "$pathSegments",
+            field: "$targetField",
+            rootDoc: "$$ROOT"
+          },
+          in: {
+            // Recursive path traversal using $reduce
+            finalValue: {
+              $let: {
+                vars: {
+                  finalObject: {
+                    $reduce: {
+                      input: "$$pathArray",
+                      initialValue: "$$rootDoc",
+                      in: {
+                        $getField: {
+                          field: "$$this",
+                          input: "$$value"
+                        }
+                      }
+                    }
+                  }
+                },
+                in: {
+                  $getField: {
+                    field: "$$field",
+                    input: "$$finalObject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 3. Environment-Based Dynamic Configuration Access
+[
+  {
+    $addFields: {
+      environment: "production", // Could be "development" or "production"
+      configType: "database",    // Could be "database" or "api"
+      configField: "host"        // Specific field to extract
+    }
+  },
+  {
+    $addFields: {
+      environmentConfig: {
+        $let: {
+          vars: {
+            env: "$environment",
+            type: "$configType", 
+            field: "$configField",
+            envs: "$application.environments"
+          },
+          in: {
+            // Build complete path dynamically
+            configValue: {
+              $getField: {
+                field: "$$field",
+                input: {
+                  $getField: {
+                    field: "$$type",
+                    input: {
+                      $getField: {
+                        field: "$$env",
+                        input: "$$envs"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            // Also get the entire config object
+            fullConfig: {
+              $getField: {
+                field: "$$type",
+                input: {
+                  $getField: {
+                    field: "$$env",
+                    input: "$$envs"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 4. Multiple Dynamic Paths with Error Handling
+[
+  {
+    $addFields: {
+      configRequests: [
+        { module: "authentication", section: "settings", field: "sessionTimeout" },
+        { module: "notifications", section: "channels", field: "email" },
+        { module: "nonexistent", section: "test", field: "value" }
+      ]
+    }
+  },
+  {
+    $addFields: {
+      multipleConfigs: {
+        $map: {
+          input: "$configRequests",
+          as: "request",
+          in: {
+            $let: {
+              vars: {
+                module: "$$request.module",
+                section: "$$request.section",
+                field: "$$request.field",
+                modules: "$application.modules"
+              },
+              in: {
+                request: "$$request",
+                result: {
+                  $let: {
+                    vars: {
+                      moduleObj: {
+                        $getField: {
+                          field: "$$module",
+                          input: "$$modules"
+                        }
+                      }
+                    },
+                    in: {
+                      $cond: [
+                        { $ne: ["$$moduleObj", null] },
+                        {
+                          $let: {
+                            vars: {
+                              sectionObj: {
+                                $getField: {
+                                  field: "$$section",
+                                  input: "$$moduleObj"
+                                }
+                              }
+                            },
+                            in: {
+                              $cond: [
+                                { $ne: ["$$sectionObj", null] },
+                                {
+                                  $ifNull: [
+                                    {
+                                      $getField: {
+                                        field: "$$field",
+                                        input: "$$sectionObj"
+                                      }
+                                    },
+                                    { error: "Field not found" }
+                                  ]
+                                },
+                                { error: "Section not found" }
+                              ]
+                            }
+                          }
+                        },
+                        { error: "Module not found" }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 5. Generic Path Resolver Function Pattern
+[
+  {
+    $addFields: {
+      pathResolver: {
+        $function: {
+          body: `
+            function(document, pathString) {
+              const parts = pathString.split('.');
+              let current = document;
+              
+              for (let part of parts) {
+                if (current && typeof current === 'object' && current.hasOwnProperty(part)) {
+                  current = current[part];
+                } else {
+                  return null;
+                }
+              }
+              
+              return current;
+            }
+          `,
+          args: ["$$ROOT", "application.modules.authentication.settings.sessionTimeout"],
+          lang: "js"
+        }
+      }
+    }
+  }
+]
+
+// 6. Real-world Example: User Permission Path Resolution
+[
+  {
+    $addFields: {
+      // These would typically come from your application context
+      userRole: "admin",
+      requestedResource: "user",
+      requestedAction: "delete",
+      userDepartment: "engineering"
+    }
+  },
+  {
+    $addFields: {
+      permissionCheck: {
+        $let: {
+          vars: {
+            role: "$userRole",
+            resource: "$requestedResource", 
+            action: "$requestedAction",
+            dept: "$userDepartment",
+            // Assume permissions are stored in the document
+            permissions: "$application.security.permissions"
+          },
+          in: {
+            // Check role-based permission
+            rolePermission: {
+              $let: {
+                vars: {
+                  rolePerms: {
+                    $getField: {
+                      field: "$$role",
+                      input: "$$permissions.roles"
+                    }
+                  }
+                },
+                in: {
+                  $cond: [
+                    { $ne: ["$$rolePerms", null] },
+                    {
+                      $let: {
+                        vars: {
+                          resourcePerms: {
+                            $getField: {
+                              field: "$$resource",
+                              input: "$$rolePerms"
+                            }
+                          }
+                        },
+                        in: {
+                          $cond: [
+                            { $ne: ["$$resourcePerms", null] },
+                            {
+                              $in: ["$$action", "$$resourcePerms"]
+                            },
+                            false
+                          ]
+                        }
+                      }
+                    },
+                    false
+                  ]
+                }
+              }
+            },
+            // Check department-based permission
+            deptPermission: {
+              $let: {
+                vars: {
+                  deptPerms: {
+                    $getField: {
+                      field: "$$dept",
+                      input: "$$permissions.departments"
+                    }
+                  }
+                },
+                in: {
+                  $cond: [
+                    { $ne: ["$$deptPerms", null] },
+                    {
+                      $let: {
+                        vars: {
+                          resourcePerms: {
+                            $getField: {
+                              field: "$$resource", 
+                              input: "$$deptPerms"
+                            }
+                          }
+                        },
+                        in: {
+                          $cond: [
+                            { $ne: ["$$resourcePerms", null] },
+                            {
+                              $in: ["$$action", "$$resourcePerms"]
+                            },
+                            false
+                          ]
+                        }
+                      }
+                    },
+                    false
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 7. Performance Optimized: Pre-computed Path Cache
+[
+  {
+    $addFields: {
+      // Pre-compute commonly accessed paths
+      pathCache: {
+        $let: {
+          vars: {
+            app: "$application",
+            usr: "$user"
+          },
+          in: {
+            authModule: { $getField: { field: "authentication", input: "$$app.modules" } },
+            notifModule: { $getField: { field: "notifications", input: "$$app.modules" } },
+            userProfile: "$$usr.profile",
+            userPrefs: "$$usr.preferences"
+          }
+        }
+      }
+    }
+  },
+  {
+    $addFields: {
+      // Now use cached paths for multiple accesses
+      optimizedAccess: {
+        $let: {
+          vars: {
+            cache: "$pathCache",
+            provider: "oauth",
+            service: "google"
+          },
+          in: {
+            googleOAuthEnabled: {
+              $getField: {
+                field: "enabled",
+                input: {
+                  $getField: {
+                    field: "$$service",
+                    input: {
+                      $getField: {
+                        field: "$$provider",
+                        input: "$$cache.authModule.providers"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            sessionTimeout: "$$cache.authModule.settings.sessionTimeout",
+            emailChannel: "$$cache.notifModule.channels.email",
+            userTheme: "$$cache.userPrefs.ui.theme"
+          }
+        }
+      }
+    }
+  }
+]
