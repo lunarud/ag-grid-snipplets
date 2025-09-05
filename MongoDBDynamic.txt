@@ -1,0 +1,517 @@
+// MongoDB Dynamic Dot Notation Field Access Examples
+// For MongoDB 7.0.15 + Compass 1.43
+
+// Sample Document Structure
+/*
+{
+  _id: ObjectId("64f8a1b2c3d4e5f6789a0123"),
+  config: {
+    "region.us": "us-east-1",
+    "region.eu": "eu-west-1", 
+    "region.asia": "ap-south-1",
+    "env.prod": "production",
+    "env.dev": "development",
+    "env.staging": "staging",
+    "feature.notifications": true,
+    "feature.analytics": false,
+    "feature.premium": true,
+    "database.primary": "mongodb://primary:27017",
+    "database.secondary": "mongodb://secondary:27017",
+    "cache.redis": "redis://cache:6379",
+    "cache.memcached": "memcached://mem:11211"
+  },
+  user: {
+    preferences: {
+      "ui.theme": "dark",
+      "ui.language": "en",
+      "notification.email": true,
+      "notification.push": false,
+      "privacy.profile": "public",
+      "privacy.activity": "private"
+    }
+  },
+  settings: {
+    "deployment.region": "us",
+    "deployment.env": "prod",
+    "feature.flags": ["notifications", "analytics"]
+  }
+}
+*/
+
+// 1. BASIC DOT NOTATION DYNAMIC ACCESS
+[
+  {
+    $addFields: {
+      currentState: "us",
+      currentEnv: "prod"
+    }
+  },
+  {
+    $addFields: {
+      dynamicConfig: {
+        $let: {
+          vars: {
+            state: "$currentState",
+            environment: "$currentEnv", 
+            configData: "$config"
+          },
+          in: {
+            // Your exact pattern - accessing region.{state}
+            regionConfig: {
+              $getField: {
+                field: { $concat: ["region.", "$$state"] },
+                input: "$$configData"
+              }
+            },
+            // Environment config using same pattern
+            envConfig: {
+              $getField: {
+                field: { $concat: ["env.", "$$environment"] },
+                input: "$$configData"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 2. MULTIPLE DOT NOTATION PATTERNS
+[
+  {
+    $addFields: {
+      targetRegion: "eu",
+      targetFeature: "notifications",
+      cacheType: "redis"
+    }
+  },
+  {
+    $addFields: {
+      multiDotAccess: {
+        $let: {
+          vars: {
+            region: "$targetRegion",
+            feature: "$targetFeature",
+            cache: "$cacheType",
+            configObj: "$config"
+          },
+          in: {
+            // Region configuration
+            regionEndpoint: {
+              $getField: {
+                field: { $concat: ["region.", "$$region"] },
+                input: "$$configObj"
+              }
+            },
+            // Feature flag
+            featureEnabled: {
+              $getField: {
+                field: { $concat: ["feature.", "$$feature"] },
+                input: "$$configObj"
+              }
+            },
+            // Cache configuration  
+            cacheEndpoint: {
+              $getField: {
+                field: { $concat: ["cache.", "$$cache"] },
+                input: "$$configObj"
+              }
+            },
+            // Database based on region
+            databaseConfig: {
+              $getField: {
+                field: {
+                  $concat: [
+                    "database.", 
+                    { 
+                      $cond: [
+                        { $eq: ["$$region", "us"] },
+                        "primary",
+                        "secondary"
+                      ]
+                    }
+                  ]
+                },
+                input: "$$configObj"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 3. USER PREFERENCES WITH DOT NOTATION
+[
+  {
+    $addFields: {
+      requestedSetting: "theme",
+      privacySetting: "profile"
+    }
+  },
+  {
+    $addFields: {
+      userConfig: {
+        $let: {
+          vars: {
+            setting: "$requestedSetting",
+            privacy: "$privacySetting",
+            userPrefs: "$user.preferences"
+          },
+          in: {
+            // UI setting access
+            uiSetting: {
+              $getField: {
+                field: { $concat: ["ui.", "$$setting"] },
+                input: "$$userPrefs"
+              }
+            },
+            // Privacy setting access
+            privacyLevel: {
+              $getField: {
+                field: { $concat: ["privacy.", "$$privacy"] },
+                input: "$$userPrefs"
+              }
+            },
+            // Notification preferences
+            emailNotifications: {
+              $getField: {
+                field: "notification.email",
+                input: "$$userPrefs"
+              }
+            },
+            pushNotifications: {
+              $getField: {
+                field: "notification.push", 
+                input: "$$userPrefs"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 4. DYNAMIC DOT NOTATION FROM DOCUMENT FIELDS
+[
+  {
+    $addFields: {
+      configSelection: {
+        $let: {
+          vars: {
+            // Use values from the document itself
+            deployRegion: "$settings.deployment.region",
+            deployEnv: "$settings.deployment.env",
+            configData: "$config"
+          },
+          in: {
+            // Build field names from document values
+            selectedRegion: {
+              $getField: {
+                field: { $concat: ["region.", "$$deployRegion"] },
+                input: "$$configData"
+              }
+            },
+            selectedEnvironment: {
+              $getField: {
+                field: { $concat: ["env.", "$$deployEnv"] },
+                input: "$$configData"
+              }
+            },
+            // Combined configuration name
+            configKey: { $concat: ["$$deployRegion", "-", "$$deployEnv"] }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 5. ADVANCED: MULTIPLE DYNAMIC FEATURES WITH DOT NOTATION
+[
+  {
+    $addFields: {
+      requestedFeatures: ["notifications", "analytics", "premium"]
+    }
+  },
+  {
+    $addFields: {
+      featureConfiguration: {
+        $let: {
+          vars: {
+            features: "$requestedFeatures",
+            configData: "$config"
+          },
+          in: {
+            // Map over features to get all feature.{name} values
+            enabledFeatures: {
+              $arrayToObject: {
+                $map: {
+                  input: "$$features",
+                  as: "featureName",
+                  in: {
+                    k: "$$featureName",
+                    v: {
+                      $ifNull: [
+                        {
+                          $getField: {
+                            field: { $concat: ["feature.", "$$featureName"] },
+                            input: "$$configData"
+                          }
+                        },
+                        false
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            // Count enabled features
+            enabledCount: {
+              $size: {
+                $filter: {
+                  input: "$$features",
+                  cond: {
+                    $eq: [
+                      {
+                        $getField: {
+                          field: { $concat: ["feature.", "$$this"] },
+                          input: "$$configData"
+                        }
+                      },
+                      true
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 6. CONDITIONAL DOT NOTATION ACCESS
+[
+  {
+    $addFields: {
+      userType: "premium",
+      currentRegion: "asia"
+    }
+  },
+  {
+    $addFields: {
+      conditionalAccess: {
+        $let: {
+          vars: {
+            type: "$userType",
+            region: "$currentRegion",
+            config: "$config"
+          },
+          in: {
+            // Different region access based on user type
+            appropriateRegion: {
+              $getField: {
+                field: { 
+                  $concat: [
+                    "region.", 
+                    {
+                      $switch: {
+                        branches: [
+                          { case: { $eq: ["$$type", "premium"] }, then: "$$region" },
+                          { case: { $eq: ["$$type", "basic"] }, then: "us" }
+                        ],
+                        default: "us"
+                      }
+                    }
+                  ]
+                },
+                input: "$$config"
+              }
+            },
+            // Feature access based on user type
+            availableFeatures: {
+              $switch: {
+                branches: [
+                  {
+                    case: { $eq: ["$$type", "premium"] },
+                    then: {
+                      notifications: {
+                        $getField: {
+                          field: "feature.notifications",
+                          input: "$$config"
+                        }
+                      },
+                      analytics: {
+                        $getField: {
+                          field: "feature.analytics", 
+                          input: "$$config"
+                        }
+                      },
+                      premium: {
+                        $getField: {
+                          field: "feature.premium",
+                          input: "$$config"
+                        }
+                      }
+                    }
+                  }
+                ],
+                default: {
+                  notifications: {
+                    $getField: {
+                      field: "feature.notifications",
+                      input: "$$config"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 7. SAFE DOT NOTATION ACCESS WITH ERROR HANDLING
+[
+  {
+    $addFields: {
+      requestedRegion: "unknown",
+      fallbackRegion: "us"
+    }
+  },
+  {
+    $addFields: {
+      safeAccess: {
+        $let: {
+          vars: {
+            region: "$requestedRegion",
+            fallback: "$fallbackRegion",
+            configData: "$config"
+          },
+          in: {
+            // Try requested region, fallback to default
+            regionConfig: {
+              $ifNull: [
+                {
+                  $getField: {
+                    field: { $concat: ["region.", "$$region"] },
+                    input: "$$configData"
+                  }
+                },
+                {
+                  $getField: {
+                    field: { $concat: ["region.", "$$fallback"] },
+                    input: "$$configData"
+                  }
+                }
+              ]
+            },
+            // Check if field exists before accessing
+            hasRegionConfig: {
+              $ne: [
+                {
+                  $getField: {
+                    field: { $concat: ["region.", "$$region"] },
+                    input: "$$configData"
+                  }
+                },
+                null
+              ]
+            },
+            // Get all available regions
+            availableRegions: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: { $objectToArray: "$$configData" },
+                    cond: { $regexMatch: { input: "$$this.k", regex: "^region\\." } }
+                  }
+                },
+                in: { $substr: ["$$this.k", 7, -1] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
+// 8. REAL-WORLD EXAMPLE: ENVIRONMENT-BASED CONFIGURATION
+[
+  {
+    $addFields: {
+      // These could come from application parameters
+      targetEnvironment: "prod",
+      targetRegion: "us",
+      requiredServices: ["database", "cache"]
+    }
+  },
+  {
+    $addFields: {
+      deploymentConfig: {
+        $let: {
+          vars: {
+            env: "$targetEnvironment",
+            region: "$targetRegion", 
+            services: "$requiredServices",
+            config: "$config"
+          },
+          in: {
+            environment: "$$env",
+            region: "$$region",
+            regionEndpoint: {
+              $getField: {
+                field: { $concat: ["region.", "$$region"] },
+                input: "$$config"
+              }
+            },
+            environmentType: {
+              $getField: {
+                field: { $concat: ["env.", "$$env"] },
+                input: "$$config"
+              }
+            },
+            serviceEndpoints: {
+              $arrayToObject: {
+                $map: {
+                  input: "$$services",
+                  as: "service",
+                  in: {
+                    k: "$$service",
+                    v: {
+                      primary: {
+                        $getField: {
+                          field: { $concat: ["$$service", ".primary"] },
+                          input: "$$config"
+                        }
+                      },
+                      secondary: {
+                        $ifNull: [
+                          {
+                            $getField: {
+                              field: { $concat: ["$$service", ".secondary"] },
+                              input: "$$config"
+                            }
+                          },
+                          "Not configured"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
